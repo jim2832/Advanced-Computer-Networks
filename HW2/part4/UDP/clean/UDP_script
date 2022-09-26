@@ -1,0 +1,8 @@
+set terminal png
+set style data lines
+set xlabel "Time (seconds)"
+set ylabel "Bandwidth"
+plot [00:10] "UDP1_clean.log" using 1:2 title "UDP1", \
+                "UDP3_clean.log" using 1:2 title "UDP3", \
+                "UDP5_clean.log" using 1:2 title "UDP5"
+

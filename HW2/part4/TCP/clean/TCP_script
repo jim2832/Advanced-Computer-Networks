@@ -1,0 +1,7 @@
+set terminal png
+set style data lines
+set xlabel "Time (seconds)"
+set ylabel "Bandwidth"
+plot [00:10] "TCP1_clean.log" using 1:2 title "TCP1", \
+		"TCP3_clean.log" using 1:2 title "TCP3", \
+		"TCP5_clean.log" using 1:2 title "TCP5"
