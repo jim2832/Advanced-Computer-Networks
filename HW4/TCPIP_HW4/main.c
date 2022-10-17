@@ -29,14 +29,16 @@ int main(void)
 	int sockfd_recv = 0, sockfd_send = 0;
 	struct sockaddr_ll sa;
 	struct ifreq req;
-	struct in_addr myip;
+	//struct in_addr myip;
 	
 	// Open a recv socket in data-link layer.
+	/*
 	if((sockfd_recv = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
 	{
 		perror("open recv socket error");
 		exit(1);
 	}
+	*/
 
 	/*
 	 * Use recvfrom function to get packet.
@@ -47,11 +49,11 @@ int main(void)
 
 	
 	// Open a send socket in data-link layer.
-	if((sockfd_send = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
-	{
-		perror("open send socket error");
-		exit(sockfd_send);
-	}
+	// if((sockfd_send = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
+	// {
+	// 	perror("open send socket error");
+	// 	exit(sockfd_send);
+	// }
 	
 	/*
 	 * Use ioctl function binds the send socket and the Network Interface Card.
