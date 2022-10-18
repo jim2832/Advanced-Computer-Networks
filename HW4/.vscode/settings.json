@@ -5,6 +5,7 @@
         "types.h": "c",
         "if_ether.h": "c",
         "unistd.h": "c",
-        "in.h": "c"
+        "in.h": "c",
+        "stdint-uintn.h": "c"
     }
 }

@@ -2,6 +2,9 @@
 #define __ARP_UTIL_H__
 
 #include <netinet/if_ether.h>
+#include <netinet/ether.h>
+#include <string.h>
+#include <arpa/inet.h>
 
 struct arp_packet
 {
@@ -18,7 +21,7 @@ void set_hard_size(struct ether_arp *packet, unsigned char size);
 void set_prot_size(struct ether_arp *packet, unsigned char size);
 void set_op_code(struct ether_arp *packet, short int code);
 
-void set_sender_hardware_addr(struct ether_arp *packet, char *address);
+void set_sender_hardware_addr(struct ether_arp *packet, unsigned char *address);
 void set_sender_protocol_addr(struct ether_arp *packet, char *address);
 void set_target_hardware_addr(struct ether_arp *packet, char *address);
 void set_target_protocol_addr(struct ether_arp *packet, char *address);

@@ -15,7 +15,6 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 //#include <sys/sysctl.h>
 
 /* 
@@ -40,15 +39,15 @@
 
 int main(int argc, char **argv){
 	int sockfd_recv = 0, sockfd_send = 0;
-	struct sockaddr_ll  sa;
+	struct sockaddr_ll sa; //socket
+	socklen_t addr_len = sizeof(sa);
 	struct ifreq req,req_mac,req_ip;
 	struct ether_addr Src_haddr,Dst_haddr,Arp_Src_haddr,Arp_Dst_haddr;
-	socklen_t addr_len = sizeof(sa);
 	struct arp_packet arp_packet_send,arp_packet_recv;
 	u_int8_t arp_packetS[PACKET_SIZE];
 	u_int8_t arp_packetR[PACKET_SIZE];
 	u_int8_t Not_Know_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
-	// struct in_addr myip;
+	struct in_addr myip;
 
 	int 			recv_length,send_length;
 	char 			tell_ip[32],has_ip[32],Mac_Addr[32],recv_SHA[32],recv_SPA[32],recv_TPA[32];
@@ -89,10 +88,28 @@ int main(int argc, char **argv){
 						exit(1);
 					}
 					memcpy(arp_packetR, (void*) &arp_packet_recv, sizeof(struct arp_packet)); //copy the arp struct into array
+					//ARP frame type : 0x0806
 					if((arp_packetR[12] == 8 && arp_packetR[13] == 6)){
-						strcpy(tell_ip, get_sender_protocol_addr(&arp_packet_recv.arp));
-						strcpy(has_ip, get_target_protocol_addr(&arp_packet_recv));
+						strcpy(tell_ip,get_sender_protocol_addr(&(arp_packet_recv.arp)));
+						strcpy(has_ip,get_target_protocol_addr(&(arp_packet_recv.arp)));
+						
+						//list all ARP packet
+						if(!strcmp(argv[2], "-a")){
+							printf("Get ARP packet - who has %s ? \t Tell %s \n",has_ip,tell_ip);
+						}
 
+						//list specific ARP packets
+						else if(strlen(argv[2]) >= 7 && strlen(argv[2]) <= 15){ //determine whether the IP is valid
+							if(!strcmp(argv[2], has_ip)){ //compare arg with target IP
+								printf("Get ARP packet - who has %s ? \t Tell %s \n",has_ip,tell_ip);
+							}
+						}
+
+						//error
+						else{
+							printf("\n Error command!! \n");
+							exit(1);
+						}
 					}
 				}
 			}
