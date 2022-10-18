@@ -1,5 +1,10 @@
 {
     "files.associations": {
-        "if.h": "c"
+        "if.h": "c",
+        "socket.h": "c",
+        "types.h": "c",
+        "if_ether.h": "c",
+        "unistd.h": "c",
+        "in.h": "c"
     }
 }

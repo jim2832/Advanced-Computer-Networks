@@ -40,9 +40,28 @@
 
 int main(int argc, char **argv){
 	int sockfd_recv = 0, sockfd_send = 0;
-	struct sockaddr_ll sa;
-	struct ifreq req;
+	struct sockaddr_ll  sa;
+	struct ifreq req,req_mac,req_ip;
+	struct ether_addr Src_haddr,Dst_haddr,Arp_Src_haddr,Arp_Dst_haddr;
+	socklen_t addr_len = sizeof(sa);
+	struct arp_packet arp_packet_send,arp_packet_recv;
+	u_int8_t arp_packetS[PACKET_SIZE];
+	u_int8_t arp_packetR[PACKET_SIZE];
+	u_int8_t Not_Know_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
 	// struct in_addr myip;
+
+	int 			recv_length,send_length;
+	char 			tell_ip[32],has_ip[32],Mac_Addr[32],recv_SHA[32],recv_SPA[32],recv_TPA[32];
+	unsigned char 	Source_MAC[ETH_ALEN],Source_IP[ETH_ALEN];
+	unsigned char 	Target_IP[30];
+	unsigned char 	Source_MAC_Addr[ETH_ALEN];
+	in_addr_t       Arp_Src_IP,Arp_Dst_IP;
+
+	//determine the login identity
+	if(geteuid() != 0){
+		printf("%s\n","ERROR: You must be root to use this tool!");
+		exit(1);
+	}
 	
 	// Open a recv socket in data-link layer.
 	if((sockfd_recv = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
@@ -51,10 +70,34 @@ int main(int argc, char **argv){
 		exit(1);
 	}
 
-	if(argc == 4 || argc == 3 || argc == 2){
+	if(argc == 2 || argc == 3 || argc == 4){
 		if(!strcmp(argv[0], "./arp")){
+			//print usage
 			if(!strcmp(argv[1], "-help") || !strcmp(argv[1], "-h") ){
 				print_usage();
+				exit(1);
+			}
+
+			//show all of the ARP packets
+			else if(!strcmp(argv[1], "-l")){
+				printf("%s\n","[ ARP sniffer and spoof program ]");
+				printf("%s\n","#### ARP sniffer mode ####");
+				while(1){
+					//error message
+					if((recv_length = recvfrom(sockfd_recv,(void*) &arp_packet_recv,sizeof(struct arp_packet), 0, NULL, NULL)) < 0){
+						perror("recvfrom error");
+						exit(1);
+					}
+					memcpy(arp_packetR, (void*) &arp_packet_recv, sizeof(struct arp_packet)); //copy the arp struct into array
+					if((arp_packetR[12] == 8 && arp_packetR[13] == 6)){
+						strcpy(tell_ip, get_sender_protocol_addr(&arp_packet_recv.arp));
+						strcpy(has_ip, get_target_protocol_addr(&arp_packet_recv));
+
+					}
+				}
+			}
+			else{
+				printf("%s\n","ERROR: You must be use ./arp.");
 				exit(1);
 			}
 		}
