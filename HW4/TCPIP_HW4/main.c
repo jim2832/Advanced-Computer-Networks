@@ -15,7 +15,6 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-//#include <sys/sysctl.h>
 
 /* 
  * Change "enp2s0f5" to your device name (e.g. "eth0"), when you test your hoework.
@@ -38,19 +37,36 @@
  */
 
 int main(int argc, char **argv){
-	int sockfd_receive = 0, sockfd_send = 0;
-	struct sockaddr_ll sa; //socket
-	socklen_t address_len = sizeof(sa);
-	struct ifreq req,req_mac,req_ip;
-	struct ether_addr Src_haddr,Dst_haddr,Arp_Src_haddr,Arp_Dst_haddr;
-	struct arp_packet arp_packet_send,arp_packet_receive;
-	u_int8_t arp_packetS[PACKET_SIZE];
-	u_int8_t arp_packetR[PACKET_SIZE];
-	u_int8_t Not_Know_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
-	struct in_addr myip;
+	int 				sockfd_receive = 0, sockfd_send = 0;
+	struct sockaddr_ll 	sa; //socket
+	socklen_t 			address_len = sizeof(sa);
+
+	struct ifreq 		request,
+						request_mac,
+						request_ip;
+
+	struct ether_addr 	Src_haddr, // source hardware address
+						Dst_haddr, // destinaiotn hardware address
+						Arp_Src_haddr, // ARP source hardware address
+						Arp_Dst_haddr; // ARP destination hardware address
+
+	struct arp_packet 	arp_packet_send,
+						arp_packet_receive;
+
+	u_int8_t 			arp_packetS[PACKET_SIZE];
+	u_int8_t 			arp_packetR[PACKET_SIZE];
+	u_int8_t			Not_Know_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
+	struct in_addr 		myip;
 
 	int 			receive_length,send_length;
-	char 			tell_ip[32],has_ip[32],Mac_Addr[32],receive_SHA[32],receive_SPA[32],receive_TPA[32];
+
+	char 			tell_ip[32],
+					has_ip[32],
+					receive_SIPA[32], // source IP address
+					receive_SHWA[32], // source hardware address
+					receive_TIPA[32], // target IP address
+					Mac_Addr[32]; //target hardware address
+
 	unsigned char 	Source_MAC[ETH_ALEN],Source_IP[ETH_ALEN];
 	unsigned char 	Target_IP[30];
 	unsigned char 	Source_MAC_Addr[ETH_ALEN];
@@ -128,7 +144,49 @@ int main(int argc, char **argv){
 					perror("open send socket error");
 					exit(1);
 				}
+
+				//init
+				memset(&request,0,sizeof(request));
+				strcpy(request.ifr_name,DEVICE_NAME);
+
+				memset(&request_ip,0,sizeof(request_ip));
+				strcpy(request_ip.ifr_name,DEVICE_NAME);
+
+				memset(&request_mac,0,sizeof(request_mac));
+				strncpy(request_mac.ifr_name,DEVICE_NAME, ETH_ALEN);
+
+				/*
+				* Use ioctl function binds the send socket and the Network Interface Card.
+			`	 * ioctl( ... )
+				*/
+
+				//handle error
+				if(ioctl(sockfd_send, SIOCGIFINDEX, &request) == -1){
+					perror("SIOCGIFINDEX ERROR");
+						exit(1);
+				}
+				if( ioctl(sockfd_send,SIOCGIFADDR, &request_ip)== -1){
+					perror("SIOCGIFADDR ERROR");
+					exit(1);
+				}
+				memcpy(Source_IP, request_ip.ifr_addr.sa_data+2, ETH_HALEN);
+				if( ioctl(sockfd_send,SIOCGIFHWADDR, (void*) &request_mac)== -1){
+					perror("SIOCGIFHWADDR ERROR");
+					exit(1);
+				}
+				memcpy(Source_MAC, request_mac.ifr_hwaddr.sa_data, ETH_HALEN);
+				memcpy(arp_packet_send.eth_hdr.ether_shost, request_mac.ifr_hwaddr.sa_data, ETH_HALEN);
+
+				//send broadcast -> ff:ff:ff:ff:ff:ff
+				for(int i=0; i<6; i++){
+					arp_packet_send.eth_hdr.ether_dhost[i] = 0xff;
+				}
+
+				memcpy(Source_MAC_Addr,arp_packet_send.eth_hdr.ether_dhost,ETH_HALEN);
+				memcpy(arp_packet_send.eth_hdr.ether_shost,request_mac.ifr_hwaddr.sa_data,ETH_HALEN);
+				arp_packet_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);// arp_packet_send.eth_hdr.ether_type = 0x0608;
 			}
+
 
 			else{
 				printf("%s\n","ERROR: You must be use ./arp.");
@@ -147,14 +205,6 @@ int main(int argc, char **argv){
 		perror("open send socket error");
 		exit(sockfd_send);
 	}
-	
-	/*
-	 * Use ioctl function binds the send socket and the Network Interface Card.
-`	 * ioctl( ... )
-	 */
-	
-	
-
 	
 	// Fill the parameters of the sa.
 
