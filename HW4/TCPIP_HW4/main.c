@@ -56,7 +56,6 @@ int main(int argc, char **argv){
 	u_int8_t 			arp_packetS[PACKET_SIZE];
 	u_int8_t 			arp_packetR[PACKET_SIZE];
 	u_int8_t			Not_Know_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
-	struct in_addr 		myip;
 
 	int 			receive_length,send_length;
 
@@ -71,6 +70,7 @@ int main(int argc, char **argv){
 	unsigned char 	Target_IP[30];
 	unsigned char 	Source_MAC_Addr[ETH_ALEN];
 	in_addr_t       Arp_Src_IP,Arp_Dst_IP;
+	struct in_addr 	myip;
 
 	//determine the login identity
 	if(geteuid() != 0){
@@ -102,7 +102,10 @@ int main(int argc, char **argv){
 						perror("recvfrom error");
 						exit(1);
 					}
-					memcpy(arp_packetR, (void*) &arp_packet_receive, sizeof(struct arp_packet)); //copy the arp struct into array
+					
+					//copy the arp struct into array
+					memcpy(arp_packetR, (void*) &arp_packet_receive, sizeof(struct arp_packet)); 
+
 					//ARP frame type : 0x0806
 					if((arp_packetR[12] == 8 && arp_packetR[13] == 6)){
 						strcpy(tell_ip,get_sender_protocol_addr(&(arp_packet_receive.arp)));
@@ -110,17 +113,17 @@ int main(int argc, char **argv){
 						
 						//list all ARP packet
 						if(!strcmp(argv[2], "-a")){
-							printf("Get ARP packet - who has %s ? \t Tell %s \n",has_ip,tell_ip);
+							printf("Get ARP packet - who has %s ? \t Tell %s \n",has_ip, tell_ip);
 						}
 
 						//list specific ARP packets
 						else if(strlen(argv[2]) >= 7 && strlen(argv[2]) <= 15){ //determine whether the IP is valid
 							if(!strcmp(argv[2], has_ip)){ //compare arg with target IP
-								printf("Get ARP packet - who has %s ? \t Tell %s \n",has_ip,tell_ip);
+								printf("Get ARP packet - who has %s ? \t Tell %s \n",has_ip, tell_ip);
 							}
 						}
 
-						//error
+						//wrong argument input or wrong IP format input
 						else{
 							printf("\n Error command!! \n");
 							exit(1);
@@ -145,32 +148,32 @@ int main(int argc, char **argv){
 					exit(1);
 				}
 
-				//init
-				memset(&request,0,sizeof(request));
-				strcpy(request.ifr_name,DEVICE_NAME);
+				//request setting
+				memset(&request, 0, sizeof(request));
+				strcpy(request.ifr_name, DEVICE_NAME);
 
-				memset(&request_ip,0,sizeof(request_ip));
-				strcpy(request_ip.ifr_name,DEVICE_NAME);
+				memset(&request_ip, 0, sizeof(request_ip));
+				strcpy(request_ip.ifr_name, DEVICE_NAME);
 
-				memset(&request_mac,0,sizeof(request_mac));
-				strncpy(request_mac.ifr_name,DEVICE_NAME, ETH_ALEN);
+				memset(&request_mac, 0, sizeof(request_mac));
+				strncpy(request_mac.ifr_name, DEVICE_NAME, ETH_ALEN);
 
 				/*
 				* Use ioctl function binds the send socket and the Network Interface Card.
 			`	 * ioctl( ... )
 				*/
 
-				//handle error
+				//bending
 				if(ioctl(sockfd_send, SIOCGIFINDEX, &request) == -1){
 					perror("SIOCGIFINDEX ERROR");
-						exit(1);
+					exit(1);
 				}
-				if( ioctl(sockfd_send,SIOCGIFADDR, &request_ip)== -1){
+				if(ioctl(sockfd_send, SIOCGIFADDR, &request_ip) == -1){ //IP
 					perror("SIOCGIFADDR ERROR");
 					exit(1);
 				}
 				memcpy(Source_IP, request_ip.ifr_addr.sa_data+2, ETH_HALEN);
-				if( ioctl(sockfd_send,SIOCGIFHWADDR, (void*) &request_mac)== -1){
+				if(ioctl(sockfd_send, SIOCGIFHWADDR, (void*) &request_mac) == -1){ //MAC address
 					perror("SIOCGIFHWADDR ERROR");
 					exit(1);
 				}
@@ -182,9 +185,81 @@ int main(int argc, char **argv){
 					arp_packet_send.eth_hdr.ether_dhost[i] = 0xff;
 				}
 
+				//set Ethernet source and destination address
 				memcpy(Source_MAC_Addr,arp_packet_send.eth_hdr.ether_dhost,ETH_HALEN);
 				memcpy(arp_packet_send.eth_hdr.ether_shost,request_mac.ifr_hwaddr.sa_data,ETH_HALEN);
-				arp_packet_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);// arp_packet_send.eth_hdr.ether_type = 0x0608;
+				arp_packet_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);// ARP frame type 0x0806;
+
+				//set hard type, prot type, hard size, prot type and op code
+				set_hard_type(&arp_packet_send.arp, htons(ARP_HRD_ETHER));
+				set_prot_type(&arp_packet_send.arp, htons(ETHERTYPE_IP));
+				set_hard_size(&arp_packet_send.arp, ETH_HALEN);
+				set_prot_size(&arp_packet_send.arp, ETH_PALEN);
+				set_op_code(&arp_packet_send.arp, htons(ARP_OP_REQUEST));
+
+				//set source IP and hardware address
+				//set target hardware address to unknown
+				memcpy(arp_packet_send.arp.arp_sha, Source_MAC , ETH_HALEN);	
+	    		memcpy(arp_packet_send.arp.arp_spa, Source_IP , ETH_HALEN);
+				memcpy(arp_packet_send.arp.arp_tha, Not_Know_Mac_Addr ,ETH_HALEN);
+
+				//process
+				char Dst_Addr[30];
+				memcpy(Dst_Addr, argv[2], 30);
+				char *Addr_token;
+				int IP_Num;
+				Addr_token = strtok(Dst_Addr, ".");
+				int i=0;
+				while( Addr_token != NULL) {
+					IP_Num = atoi(Addr_token);
+					Target_IP[i] = IP_Num;
+					i++;
+					Addr_token = strtok(NULL,".");
+				}
+				memcpy(arp_packet_send.arp.arp_tpa,Target_IP, ETH_HALEN);
+				
+				// Fill the parameters of the sa.
+				bzero(&sa, sizeof(sa));
+
+				sa.sll_family = AF_PACKET;
+				sa.sll_ifindex = if_nametoindex(request.ifr_name);
+				sa.sll_protocol = htons(ETH_P_ARP);
+				sa.sll_halen = ETHER_ADDR_LEN;
+				sa.sll_hatype = htons(ARP_HRD_ETHER);
+				sa.sll_pkttype = PACKET_BROADCAST;
+		
+				for(int i=0; i<6; i++){
+					sa.sll_addr[i];
+				}
+				
+				/*
+				* use sendto function with sa variable to send your packet out
+				* sendto( ... )
+				*/
+				sendto(sockfd_send, (void*)&arp_packet_send, sizeof(arp_packet_send), 0, (struct sockaddr*)&sa, sizeof(sa));
+
+				while(1){
+					
+					if(recvfrom(sockfd_receive, &arp_packet_receive, sizeof(arp_packet_receive), 0, (struct sockaddr*)&sa, &address_len) < 0){
+						printf("ERROR: recv\n");
+					}
+					if(ntohs(arp_packet_receive.eth_hdr.ether_type) == ETHERTYPE_ARP && arp_packet_receive.arp.arp_op == htons(ARP_OP_REPLY)&& memcmp(arp_packet_receive.arp.arp_spa, arp_packet_send.arp.arp_tpa,ETH_PALEN) == 0)
+					{
+						printf("MAC address of %u.%u.%u.%u is %02x:%02x:%02x:%02x:%02x:%02x\n",
+						arp_packet_receive.arp.arp_spa[0], 
+						arp_packet_receive.arp.arp_spa[1], 
+						arp_packet_receive.arp.arp_spa[2], 
+						arp_packet_receive.arp.arp_spa[3],
+
+						arp_packet_receive.arp.arp_sha[0], 
+						arp_packet_receive.arp.arp_sha[1], 
+						arp_packet_receive.arp.arp_sha[2], 
+						arp_packet_receive.arp.arp_sha[3], 
+						arp_packet_receive.arp.arp_sha[4], 
+						arp_packet_receive.arp.arp_sha[5]);
+						exit(1);
+					}
+					}
 			}
 
 
@@ -205,20 +280,6 @@ int main(int argc, char **argv){
 		perror("open send socket error");
 		exit(sockfd_send);
 	}
-	
-	// Fill the parameters of the sa.
-
-
-
-	
-	/*
-	 * use sendto function with sa variable to send your packet out
-	 * sendto( ... )
-	 */
-	
-	
-	
-
 
 	return 0;
 }
