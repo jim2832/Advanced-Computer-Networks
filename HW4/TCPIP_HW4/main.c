@@ -38,19 +38,19 @@
  */
 
 int main(int argc, char **argv){
-	int sockfd_recv = 0, sockfd_send = 0;
+	int sockfd_receive = 0, sockfd_send = 0;
 	struct sockaddr_ll sa; //socket
-	socklen_t addr_len = sizeof(sa);
+	socklen_t address_len = sizeof(sa);
 	struct ifreq req,req_mac,req_ip;
 	struct ether_addr Src_haddr,Dst_haddr,Arp_Src_haddr,Arp_Dst_haddr;
-	struct arp_packet arp_packet_send,arp_packet_recv;
+	struct arp_packet arp_packet_send,arp_packet_receive;
 	u_int8_t arp_packetS[PACKET_SIZE];
 	u_int8_t arp_packetR[PACKET_SIZE];
 	u_int8_t Not_Know_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
 	struct in_addr myip;
 
-	int 			recv_length,send_length;
-	char 			tell_ip[32],has_ip[32],Mac_Addr[32],recv_SHA[32],recv_SPA[32],recv_TPA[32];
+	int 			receive_length,send_length;
+	char 			tell_ip[32],has_ip[32],Mac_Addr[32],receive_SHA[32],receive_SPA[32],receive_TPA[32];
 	unsigned char 	Source_MAC[ETH_ALEN],Source_IP[ETH_ALEN];
 	unsigned char 	Target_IP[30];
 	unsigned char 	Source_MAC_Addr[ETH_ALEN];
@@ -62,10 +62,9 @@ int main(int argc, char **argv){
 		exit(1);
 	}
 	
-	// Open a recv socket in data-link layer.
-	if((sockfd_recv = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
-	{
-		perror("open recv socket error");
+	// Open a receive socket in data-link layer.
+	if((sockfd_receive = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0){
+		perror("open receive socket error");
 		exit(1);
 	}
 
@@ -79,19 +78,19 @@ int main(int argc, char **argv){
 
 			//show all of the ARP packets
 			else if(!strcmp(argv[1], "-l")){
-				printf("%s\n","[ ARP sniffer and spoof program ]");
-				printf("%s\n","#### ARP sniffer mode ####");
+				printf("[ ARP sniffer and spoof program ]");
+				printf("#### ARP sniffer mode ####");
 				while(1){
 					//error message
-					if((recv_length = recvfrom(sockfd_recv,(void*) &arp_packet_recv,sizeof(struct arp_packet), 0, NULL, NULL)) < 0){
+					if((receive_length = recvfrom(sockfd_receive,(void*) &arp_packet_receive,sizeof(struct arp_packet), 0, NULL, NULL)) < 0){
 						perror("recvfrom error");
 						exit(1);
 					}
-					memcpy(arp_packetR, (void*) &arp_packet_recv, sizeof(struct arp_packet)); //copy the arp struct into array
+					memcpy(arp_packetR, (void*) &arp_packet_receive, sizeof(struct arp_packet)); //copy the arp struct into array
 					//ARP frame type : 0x0806
 					if((arp_packetR[12] == 8 && arp_packetR[13] == 6)){
-						strcpy(tell_ip,get_sender_protocol_addr(&(arp_packet_recv.arp)));
-						strcpy(has_ip,get_target_protocol_addr(&(arp_packet_recv.arp)));
+						strcpy(tell_ip,get_sender_protocol_addr(&(arp_packet_receive.arp)));
+						strcpy(has_ip,get_target_protocol_addr(&(arp_packet_receive.arp)));
 						
 						//list all ARP packet
 						if(!strcmp(argv[2], "-a")){
@@ -111,8 +110,26 @@ int main(int argc, char **argv){
 							exit(1);
 						}
 					}
+					else{
+						printf("\n Error command!! \n");
+						exit(1);
+					}
 				}
 			}
+
+			//ARP request to get the MAC address
+			else if(!strcmp(argv[1], "-q")){
+				printf("%s\n","[ ARP sniffer and spoof program ]");
+				printf("%s\n","#### ARP query mode ####");
+
+				//exception
+				if((sockfd_send = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
+				{
+					perror("open send socket error");
+					exit(1);
+				}
+			}
+
 			else{
 				printf("%s\n","ERROR: You must be use ./arp.");
 				exit(1);
