@@ -37,13 +37,13 @@
  */
 
 int main(int argc, char **argv){
-	int 				sockfd_receive = 0, sockfd_send = 0;
+	int 				sockfd_recv = 0, sockfd_send = 0;
 	struct sockaddr_ll 	sa; //socket
 	socklen_t 			address_len = sizeof(sa);
 
-	struct ifreq 		request,
-						request_mac,
-						request_ip;
+	struct ifreq 		req,
+						req_mac,
+						req_ip;
 
 	struct ether_addr 	Src_haddr, // source hardware address
 						Dst_haddr, // destinaiotn hardware address
@@ -51,19 +51,19 @@ int main(int argc, char **argv){
 						Arp_Dst_haddr; // ARP destination hardware address
 
 	struct arp_packet 	arp_packet_send,
-						arp_packet_receive;
+						arp_packet_recv;
 
 	u_int8_t 			arp_packetS[PACKET_SIZE];
 	u_int8_t 			arp_packetR[PACKET_SIZE];
 	u_int8_t			Not_Know_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
 
-	int 			receive_length,send_length;
+	int 			recv_length,send_length;
 
 	char 			tell_ip[32],
 					has_ip[32],
-					receive_SIPA[32], // source IP address
-					receive_SHWA[32], // source hardware address
-					receive_TIPA[32], // target IP address
+					recv_SIPA[32], // source IP address
+					recv_SHWA[32], // source hardware address
+					recv_TIPA[32], // target IP address
 					Mac_Addr[32]; //target hardware address
 
 	unsigned char 	Source_MAC[ETH_ALEN],Source_IP[ETH_ALEN];
@@ -78,9 +78,9 @@ int main(int argc, char **argv){
 		exit(1);
 	}
 	
-	// Open a receive socket in data-link layer.
-	if((sockfd_receive = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0){
-		perror("open receive socket error");
+	// Open a recv socket in data-link layer.
+	if((sockfd_recv = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0){
+		perror("open recv socket error");
 		exit(1);
 	}
 
@@ -94,22 +94,22 @@ int main(int argc, char **argv){
 
 			//show all of the ARP packets
 			else if(!strcmp(argv[1], "-l")){
-				printf("[ ARP sniffer and spoof program ]");
-				printf("#### ARP sniffer mode ####");
+				printf("%s\n","[ ARP sniffer and spoof program ]");
+				printf("%s\n","#### ARP sniffer mode ####");
 				while(1){
 					//error message
-					if((receive_length = recvfrom(sockfd_receive,(void*) &arp_packet_receive,sizeof(struct arp_packet), 0, NULL, NULL)) < 0){
+					if((recv_length = recvfrom(sockfd_recv,(void*) &arp_packet_recv,sizeof(struct arp_packet), 0, NULL, NULL)) < 0){
 						perror("recvfrom error");
 						exit(1);
 					}
 					
 					//copy the arp struct into array
-					memcpy(arp_packetR, (void*) &arp_packet_receive, sizeof(struct arp_packet)); 
+					memcpy(arp_packetR, (void*) &arp_packet_recv, sizeof(struct arp_packet)); 
 
 					//ARP frame type : 0x0806
 					if((arp_packetR[12] == 8 && arp_packetR[13] == 6)){
-						strcpy(tell_ip,get_sender_protocol_addr(&(arp_packet_receive.arp)));
-						strcpy(has_ip,get_target_protocol_addr(&(arp_packet_receive.arp)));
+						strcpy(tell_ip,get_sender_protocol_addr(&(arp_packet_recv.arp)));
+						strcpy(has_ip,get_target_protocol_addr(&(arp_packet_recv.arp)));
 						
 						//list all ARP packet
 						if(!strcmp(argv[2], "-a")){
@@ -129,14 +129,10 @@ int main(int argc, char **argv){
 							exit(1);
 						}
 					}
-					else{
-						printf("\n Error command!! \n");
-						exit(1);
-					}
 				}
 			}
 
-			//ARP request to get the MAC address
+			//ARP req to get the MAC address
 			else if(!strcmp(argv[1], "-q")){
 				printf("%s\n","[ ARP sniffer and spoof program ]");
 				printf("%s\n","#### ARP query mode ####");
@@ -148,37 +144,37 @@ int main(int argc, char **argv){
 					exit(1);
 				}
 
-				//request setting
-				memset(&request, 0, sizeof(request));
-				strcpy(request.ifr_name, DEVICE_NAME);
+				//req setting
+				memset(&req, 0, sizeof(req));
+				strcpy(req.ifr_name, DEVICE_NAME);
 
-				memset(&request_ip, 0, sizeof(request_ip));
-				strcpy(request_ip.ifr_name, DEVICE_NAME);
+				memset(&req_ip, 0, sizeof(req_ip));
+				strcpy(req_ip.ifr_name, DEVICE_NAME);
 
-				memset(&request_mac, 0, sizeof(request_mac));
-				strncpy(request_mac.ifr_name, DEVICE_NAME, ETH_ALEN);
+				memset(&req_mac, 0, sizeof(req_mac));
+				strncpy(req_mac.ifr_name, DEVICE_NAME, ETH_ALEN);
 
 				/*
 				* Use ioctl function binds the send socket and the Network Interface Card.
 			`	 * ioctl( ... )
 				*/
 
-				//bending
-				if(ioctl(sockfd_send, SIOCGIFINDEX, &request) == -1){
+				//binding
+				if(ioctl(sockfd_send, SIOCGIFINDEX, &req) == -1){
 					perror("SIOCGIFINDEX ERROR");
 					exit(1);
 				}
-				if(ioctl(sockfd_send, SIOCGIFADDR, &request_ip) == -1){ //IP
+				if(ioctl(sockfd_send, SIOCGIFADDR, &req_ip) == -1){ //IP
 					perror("SIOCGIFADDR ERROR");
 					exit(1);
 				}
-				memcpy(Source_IP, request_ip.ifr_addr.sa_data+2, ETH_HALEN);
-				if(ioctl(sockfd_send, SIOCGIFHWADDR, (void*) &request_mac) == -1){ //MAC address
+				memcpy(Source_IP, req_ip.ifr_addr.sa_data+2, ETH_HALEN);
+				if(ioctl(sockfd_send, SIOCGIFHWADDR, (void*) &req_mac) == -1){ //MAC address
 					perror("SIOCGIFHWADDR ERROR");
 					exit(1);
 				}
-				memcpy(Source_MAC, request_mac.ifr_hwaddr.sa_data, ETH_HALEN);
-				memcpy(arp_packet_send.eth_hdr.ether_shost, request_mac.ifr_hwaddr.sa_data, ETH_HALEN);
+				memcpy(Source_MAC, req_mac.ifr_hwaddr.sa_data, ETH_HALEN);
+				memcpy(arp_packet_send.eth_hdr.ether_shost, req_mac.ifr_hwaddr.sa_data, ETH_HALEN);
 
 				//send broadcast -> ff:ff:ff:ff:ff:ff
 				for(int i=0; i<6; i++){
@@ -187,7 +183,7 @@ int main(int argc, char **argv){
 
 				//set Ethernet source and destination address
 				memcpy(Source_MAC_Addr,arp_packet_send.eth_hdr.ether_dhost,ETH_HALEN);
-				memcpy(arp_packet_send.eth_hdr.ether_shost,request_mac.ifr_hwaddr.sa_data,ETH_HALEN);
+				memcpy(arp_packet_send.eth_hdr.ether_shost,req_mac.ifr_hwaddr.sa_data,ETH_HALEN);
 				arp_packet_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);// ARP frame type 0x0806;
 
 				//set hard type, prot type, hard size, prot type and op code
@@ -209,8 +205,8 @@ int main(int argc, char **argv){
 				char *Addr_token;
 				int IP_Num;
 				Addr_token = strtok(Dst_Addr, ".");
-				int i=0;
-				while( Addr_token != NULL) {
+				int i = 0;
+				while(Addr_token != NULL) {
 					IP_Num = atoi(Addr_token);
 					Target_IP[i] = IP_Num;
 					i++;
@@ -222,7 +218,7 @@ int main(int argc, char **argv){
 				bzero(&sa, sizeof(sa));
 
 				sa.sll_family = AF_PACKET;
-				sa.sll_ifindex = if_nametoindex(request.ifr_name);
+				sa.sll_ifindex = if_nametoindex(req.ifr_name);
 				sa.sll_protocol = htons(ETH_P_ARP);
 				sa.sll_halen = ETHER_ADDR_LEN;
 				sa.sll_hatype = htons(ARP_HRD_ETHER);
@@ -240,23 +236,23 @@ int main(int argc, char **argv){
 
 				while(1){
 					
-					if(recvfrom(sockfd_receive, &arp_packet_receive, sizeof(arp_packet_receive), 0, (struct sockaddr*)&sa, &address_len) < 0){
+					if(recvfrom(sockfd_recv, &arp_packet_recv, sizeof(arp_packet_recv), 0, (struct sockaddr*)&sa, &address_len) < 0){
 						printf("ERROR: recv\n");
 					}
-					if(ntohs(arp_packet_receive.eth_hdr.ether_type) == ETHERTYPE_ARP && arp_packet_receive.arp.arp_op == htons(ARP_OP_REPLY)&& memcmp(arp_packet_receive.arp.arp_spa, arp_packet_send.arp.arp_tpa,ETH_PALEN) == 0)
+					if(ntohs(arp_packet_recv.eth_hdr.ether_type) == ETHERTYPE_ARP && arp_packet_recv.arp.arp_op == htons(ARP_OP_REPLY)&& memcmp(arp_packet_recv.arp.arp_spa, arp_packet_send.arp.arp_tpa,ETH_PALEN) == 0)
 					{
 						printf("MAC address of %u.%u.%u.%u is %02x:%02x:%02x:%02x:%02x:%02x\n",
-						arp_packet_receive.arp.arp_spa[0], 
-						arp_packet_receive.arp.arp_spa[1], 
-						arp_packet_receive.arp.arp_spa[2], 
-						arp_packet_receive.arp.arp_spa[3],
+						arp_packet_recv.arp.arp_spa[0], 
+						arp_packet_recv.arp.arp_spa[1], 
+						arp_packet_recv.arp.arp_spa[2], 
+						arp_packet_recv.arp.arp_spa[3],
 
-						arp_packet_receive.arp.arp_sha[0], 
-						arp_packet_receive.arp.arp_sha[1], 
-						arp_packet_receive.arp.arp_sha[2], 
-						arp_packet_receive.arp.arp_sha[3], 
-						arp_packet_receive.arp.arp_sha[4], 
-						arp_packet_receive.arp.arp_sha[5]);
+						arp_packet_recv.arp.arp_sha[0], 
+						arp_packet_recv.arp.arp_sha[1], 
+						arp_packet_recv.arp.arp_sha[2], 
+						arp_packet_recv.arp.arp_sha[3], 
+						arp_packet_recv.arp.arp_sha[4], 
+						arp_packet_recv.arp.arp_sha[5]);
 						exit(1);
 					}
 					}
