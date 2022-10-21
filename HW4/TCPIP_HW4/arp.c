@@ -10,23 +10,23 @@
 
 //You can fill the following functions or add other functions if needed. If not, you needn't write anything in them.  
 void set_hard_type(struct ether_arp *packet, unsigned short int type){
-
+	packet -> ea_hdr.ar_hrd = type;
 }
 
 void set_prot_type(struct ether_arp *packet, unsigned short int type){
-
+	packet -> ea_hdr.ar_pro = type;
 }
 
 void set_hard_size(struct ether_arp *packet, unsigned char size){
-
+	packet ->ea_hdr.ar_hln = size;
 }
 
 void set_prot_size(struct ether_arp *packet, unsigned char size){
-
+	packet -> ea_hdr.ar_pln = size;
 }
 
 void set_op_code(struct ether_arp *packet, short int code){
-
+	packet -> ea_hdr.ar_op = code;
 }
 
 
@@ -49,13 +49,13 @@ void set_target_protocol_addr(struct ether_arp *packet, char *address){
 
 char* get_sender_protocol_addr(struct ether_arp *packet){
 	struct in_addr send_address;
-	memcpy(&send_address,packet->arp_tpa,4);
+	memcpy(&send_address, packet->arp_tpa,4);
 	return inet_ntoa(send_address);
 }
 
 char* get_target_protocol_addr(struct ether_arp *packet){
 	struct in_addr target_address;
-	memcpy(&target_address,packet->arp_spa,4);
+	memcpy(&target_address, packet->arp_spa,4);
 	return inet_ntoa(target_address);
 }
 

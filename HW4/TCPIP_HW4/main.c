@@ -21,6 +21,7 @@
  * If you don't know your device name, you can use "ifconfig" command on Linux.
  * You have to use "enp2s0f5" when you ready to upload your homework.
  */
+
 #define DEVICE_NAME "enp0s31f6" //my device name
 #define PACKET_SIZE 2000
 #define ETH_PALEN 4
@@ -94,8 +95,8 @@ int main(int argc, char **argv){
 
 			//show all of the ARP packets
 			else if(!strcmp(argv[1], "-l")){
-				printf("%s\n","[ ARP sniffer and spoof program ]");
-				printf("%s\n","#### ARP sniffer mode ####");
+				printf("%s\n", "[ ARP sniffer and spoof program ]");
+				printf("%s\n", "#### ARP sniffer mode ####");
 				while(1){
 					//error message
 					if((recv_length = recvfrom(sockfd_recv,(void*) &arp_packet_recv,sizeof(struct arp_packet), 0, NULL, NULL)) < 0){
@@ -108,8 +109,8 @@ int main(int argc, char **argv){
 
 					//ARP frame type : 0x0806
 					if((arp_packetR[12] == 8 && arp_packetR[13] == 6)){
-						strcpy(tell_ip,get_sender_protocol_addr(&(arp_packet_recv.arp)));
-						strcpy(has_ip,get_target_protocol_addr(&(arp_packet_recv.arp)));
+						strcpy(tell_ip, get_sender_protocol_addr(&(arp_packet_recv.arp)));
+						strcpy(has_ip, get_target_protocol_addr(&(arp_packet_recv.arp)));
 						
 						//list all ARP packet
 						if(!strcmp(argv[2], "-a")){
@@ -132,7 +133,7 @@ int main(int argc, char **argv){
 				}
 			}
 
-			//ARP req to get the MAC address
+			//ARP request to get the MAC address
 			else if(!strcmp(argv[1], "-q")){
 				printf("%s\n","[ ARP sniffer and spoof program ]");
 				printf("%s\n","#### ARP query mode ####");
@@ -195,7 +196,7 @@ int main(int argc, char **argv){
 
 				//set source IP and hardware address
 				//set target hardware address to unknown
-				memcpy(arp_packet_send.arp.arp_sha, Source_MAC , ETH_HALEN);	
+				memcpy(arp_packet_send.arp.arp_sha, Source_MAC , ETH_HALEN);
 	    		memcpy(arp_packet_send.arp.arp_spa, Source_IP , ETH_HALEN);
 				memcpy(arp_packet_send.arp.arp_tha, Not_Know_Mac_Addr ,ETH_HALEN);
 
