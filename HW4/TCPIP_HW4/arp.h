@@ -14,7 +14,6 @@ struct arp_packet
 
 void print_usage();
 
-
 void set_hard_type(struct ether_arp *packet, unsigned short int type);
 void set_prot_type(struct ether_arp *packet, unsigned short int type);
 void set_hard_size(struct ether_arp *packet, unsigned char size);
