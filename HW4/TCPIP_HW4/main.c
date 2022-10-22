@@ -22,7 +22,7 @@
  * You have to use "enp2s0f5" when you ready to upload your homework.
  */
 
-#define DEVICE_NAME "enp0s31f6" //my device name
+#define DEVICE_NAME "enp2s0f5" //my device name
 #define PACKET_SIZE 2000
 #define ETH_PALEN 4
 #define ETH_HALEN 6
