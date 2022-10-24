@@ -56,7 +56,7 @@ int main(int argc, char **argv){
 
 	u_int8_t 			arp_packetS[PACKET_SIZE];
 	u_int8_t 			arp_packetR[PACKET_SIZE];
-	u_int8_t			Not_Know_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
+	u_int8_t			Unknown_Mac_Addr[ETH_HALEN]={0x00,0x00,0x00,0x00,0x00,0x00};
 
 	int 			recv_length,send_length;
 
@@ -104,7 +104,7 @@ int main(int argc, char **argv){
 					}
 					
 					//copy the arp struct into array
-					memcpy(arp_packetR, (void*) &arp_packet_recv, sizeof(struct arp_packet)); 
+					memcpy(arp_packetR, (void*) &arp_packet_recv, sizeof(struct arp_packet));
 
 					//ARP frame type : 0x0806
 					if((arp_packetR[12] == 8 && arp_packetR[13] == 6)){
@@ -113,13 +113,13 @@ int main(int argc, char **argv){
 						
 						//list all ARP packet
 						if(!strcmp(argv[2], "-a")){
-							printf("Get ARP packet - who has %s ? \t Tell %s \n",has_ip, tell_ip);
+							printf("Get ARP packet - who has %s ? \t Tell %s \n", has_ip, tell_ip);
 						}
 
 						//list specific ARP packets
 						else if(strlen(argv[2]) >= 7 && strlen(argv[2]) <= 15){ //determine whether the IP is valid
 							if(!strcmp(argv[2], has_ip)){ //compare arg with target IP
-								printf("Get ARP packet - who has %s ? \t Tell %s \n",has_ip, tell_ip);
+								printf("Get ARP packet - who has %s ? \t Tell %s \n", has_ip, tell_ip);
 							}
 						}
 
@@ -182,8 +182,8 @@ int main(int argc, char **argv){
 				}
 
 				//set Ethernet source and destination address(header)
-				memcpy(Source_MAC_Addr,arp_packet_send.eth_hdr.ether_dhost,ETH_HALEN);
-				memcpy(arp_packet_send.eth_hdr.ether_shost,req_mac.ifr_hwaddr.sa_data,ETH_HALEN);
+				memcpy(Source_MAC_Addr, arp_packet_send.eth_hdr.ether_dhost, ETH_HALEN);
+				memcpy(arp_packet_send.eth_hdr.ether_shost, req_mac.ifr_hwaddr.sa_data, ETH_HALEN);
 				arp_packet_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);// ARP frame type 0x0806;
 
 				//set hard type, prot type, hard size, prot type and op code(ARP packet)
@@ -197,13 +197,13 @@ int main(int argc, char **argv){
 				//set target hardware address to unknown
 				memcpy(arp_packet_send.arp.arp_sha, Source_MAC , ETH_HALEN);
 	    		memcpy(arp_packet_send.arp.arp_spa, Source_IP , ETH_HALEN);
-				memcpy(arp_packet_send.arp.arp_tha, Not_Know_Mac_Addr ,ETH_HALEN);
+				memcpy(arp_packet_send.arp.arp_tha, Unknown_Mac_Addr ,ETH_HALEN);
 
 				//process
 				char Dst_Addr[30];
-				memcpy(Dst_Addr, argv[2], 30);
 				char *Addr_token;
 				int IP_Num;
+				memcpy(Dst_Addr, argv[2], 30);
 				Addr_token = strtok(Dst_Addr, ".");
 
 				int i = 0;
@@ -238,25 +238,27 @@ int main(int argc, char **argv){
 				sendto(sockfd_send, (void*)&arp_packet_send, sizeof(arp_packet_send), 0, (struct sockaddr*)&sa, sizeof(sa));
 
 				while(1){
+					//error detection
 					if(recvfrom(sockfd_recv, &arp_packet_recv, sizeof(arp_packet_recv), 0, (struct sockaddr*)&sa, &address_len) < 0){
 						printf("ERROR: recv\n");
 					}
+
 					if(ntohs(arp_packet_recv.eth_hdr.ether_type) == ETHERTYPE_ARP && arp_packet_recv.arp.arp_op == htons(ARP_OP_REPLY)&& memcmp(arp_packet_recv.arp.arp_spa, arp_packet_send.arp.arp_tpa, ETH_PALEN) == 0){
 						printf("MAC address of %u.%u.%u.%u is %02x:%02x:%02x:%02x:%02x:%02x\n",
-						arp_packet_recv.arp.arp_spa[0], 
-						arp_packet_recv.arp.arp_spa[1], 
-						arp_packet_recv.arp.arp_spa[2], 
+						arp_packet_recv.arp.arp_spa[0],
+						arp_packet_recv.arp.arp_spa[1],
+						arp_packet_recv.arp.arp_spa[2],
 						arp_packet_recv.arp.arp_spa[3],
 
-						arp_packet_recv.arp.arp_sha[0], 
-						arp_packet_recv.arp.arp_sha[1], 
-						arp_packet_recv.arp.arp_sha[2], 
-						arp_packet_recv.arp.arp_sha[3], 
-						arp_packet_recv.arp.arp_sha[4], 
+						arp_packet_recv.arp.arp_sha[0],
+						arp_packet_recv.arp.arp_sha[1],
+						arp_packet_recv.arp.arp_sha[2],
+						arp_packet_recv.arp.arp_sha[3],
+						arp_packet_recv.arp.arp_sha[4],
 						arp_packet_recv.arp.arp_sha[5]);
 						exit(1);
 					}
-					}
+				}
 			}
 
 			//generate fake MAC address
