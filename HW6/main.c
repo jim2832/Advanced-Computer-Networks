@@ -78,7 +78,8 @@ int main(int argc, char **argv){
 
     for(TTL=1; TTL<max_hopping; TTL++){
         printf("Now the TTL is %d\n", TTL);
-        setsockopt(fd, IPPROTO_IP, IP_TTL, (char *)&ttl, sizeof(ttl)); //set ttl  on all sockets
+        //設定每個封包的TTL
+        setsockopt(soc, IPPROTO_IP, IP_TTL, (char *)&TTL, sizeof(TTL));
         // 將定義好的 ICMP Header 送到目標主機
         network_number = sendto(soc, (char*)&hdr, sizeof(hdr), 0, (struct sockaddr*)&addr, sizeof(addr));
         if(network_number < 1){
@@ -87,7 +88,7 @@ int main(int argc, char **argv){
         }
         printf("an ICMP packet has been sent to %s\n", argv[2]);
 
-        // 清空 buf
+        // 清空 buffer
         memset(buf, 0, sizeof(buf));
 
         printf("Waiting for ICMP echo reply...\n");
@@ -107,21 +108,17 @@ int main(int argc, char **argv){
 
         // 判斷 ICMP 種類
         switch(icmphdrptr->type){
-            case 3:
-                printf("address %s: Destination Unreachable\n", argv[2]);
-                printf("The ICMP type is %d\n", icmphdrptr->type);
-                printf("The ICMP code is %d\n", icmphdrptr->code);
-                break;
-            case 8:
-                printf("The host %s is alive!\n", argv[2]);
-                printf("The ICMP type is %d\n", icmphdrptr->type);
-                printf("The ICMP code is %d\n", icmphdrptr->code);
-                break;
+            //ICMP echo reply
             case 0:
                 printf("The host %s is alive!\n", argv[2]);
                 printf("The ICMP type is %d\n", icmphdrptr->type);
                 printf("The ICMP code is %d\n", icmphdrptr->code);
                 break;
+            //time exceed
+            case 11:
+                printf("time exceeded!\n");
+                printf("The ICMP type is %d\n", icmphdrptr->type);
+                printf("The ICMP code is %d\n", icmphdrptr->code);
             default:
                 printf("Another situations!\n");
                 printf("The ICMP type is %d\n", icmphdrptr->type);
