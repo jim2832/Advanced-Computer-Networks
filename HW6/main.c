@@ -12,6 +12,9 @@
 #include <math.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -49,7 +52,7 @@ int main(int argc, char *argv[]){
     int sd;
     struct icmphdr hdr;
     struct sockaddr_in addr;
-    int num;
+    int network_order;
     char buf[1024];
     struct icmphdr *icmphdrptr;
     struct iphdr *iphdrptr;
@@ -62,8 +65,8 @@ int main(int argc, char *argv[]){
     addr.sin_family = PF_INET; // IPv4
 
     // 將使用者輸入的 IP 轉成 network order
-    num = inet_pton(PF_INET, argv[1], &addr.sin_addr);
-    if(num < 0){
+    network_order = inet_pton(PF_INET, argv[1], &addr.sin_addr);
+    if(network_order < 0){
         perror("inet_pton");
         exit(-1);
     }
@@ -89,21 +92,21 @@ int main(int argc, char *argv[]){
     hdr.checksum = checksum((unsigned short*)&hdr, sizeof(hdr));
 
     // 將定義好的 ICMP Header 送到目標主機
-    num = sendto(sd, (char*)&hdr, sizeof(hdr), 0, (struct sockaddr*)&addr, sizeof(addr));
-    if(num < 1){
+    network_order = sendto(sd, (char*)&hdr, sizeof(hdr), 0, (struct sockaddr*)&addr, sizeof(addr));
+    if(network_order < 1){
         perror("sendto");
         exit(-1);
     }
-    printf(KYEL"We have sended an ICMP packet to %s\n", argv[1]);
+    printf("We have sended an ICMP packet to %s\n", argv[1]);
 
     // 清空 buf
     memset(buf, 0, sizeof(buf));
 
-    printf(KGRN"Waiting for ICMP echo...\n");
+    printf("Waiting for ICMP echo...\n");
 
     // 接收來自目標主機的 Echo Reply
-    num = recv(sd, buf, sizeof(buf), 0);
-    if(num < 1){
+    network_order = recv(sd, buf, sizeof(buf), 0);
+    if(network_order < 1){
         perror("recv");
         exit(-1);
     }
@@ -117,24 +120,24 @@ int main(int argc, char *argv[]){
     // 判斷 ICMP 種類
     switch(icmphdrptr->type){
         case 3:
-            printf(KBLU"The host %s is a unreachable purpose!\n", argv[1]);
-            printf(KBLU"The ICMP type is %d\n", icmphdrptr->type);
-            printf(KBLU"The ICMP code is %d\n", icmphdrptr->code);
+            printf("The host %s is a unreachable purpose!\n", argv[1]);
+            printf("The ICMP type is %d\n", icmphdrptr->type);
+            printf("The ICMP code is %d\n", icmphdrptr->code);
             break;
         case 8:
-            printf(KRED"The host %s is alive!\n", argv[1]);
-            printf(KRED"The ICMP type is %d\n", icmphdrptr->type);
-            printf(KRED"The ICMP code is %d\n", icmphdrptr->code);
+            printf("The host %s is alive!\n", argv[1]);
+            printf("The ICMP type is %d\n", icmphdrptr->type);
+            printf("The ICMP code is %d\n", icmphdrptr->code);
             break;
         case 0:
-            printf(KRED"The host %s is alive!\n", argv[1]);
-            printf(KRED"The ICMP type is %d\n", icmphdrptr->type);
-            printf(KRED"The ICMP code is %d\n", icmphdrptr->code);
+            printf("The host %s is alive!\n", argv[1]);
+            printf("The ICMP type is %d\n", icmphdrptr->type);
+            printf("The ICMP code is %d\n", icmphdrptr->code);
             break;
         default:
-            printf(KMAG"Another situations!\n");
-            printf(KMAG"The ICMP type is %d\n", icmphdrptr->type);
-            printf(KMAG"The ICMP code is %d\n", icmphdrptr->code);
+            printf("Another situations!\n");
+            printf("The ICMP type is %d\n", icmphdrptr->type);
+            printf("The ICMP code is %d\n", icmphdrptr->code);
             break;
     }
 
