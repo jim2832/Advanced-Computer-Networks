@@ -18,62 +18,49 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-uint16_t calculate_checksum(unsigned char* buffer, int bytes){
-    uint32_t checksum = 0;
-    unsigned char* end = buffer + bytes;
+unsigned short checksum(unsigned short *buf, int bufsz){
+    unsigned long sum = 0xffff;
 
-    // odd bytes add last byte and reset end
-    if (bytes % 2 == 1) {
-        end = buffer + bytes - 1;
-        checksum += (*end) << 8;
+    while(bufsz > 1){
+        sum += *buf;
+        buf++;
+        bufsz -= 2;
     }
 
-    // add words of two bytes, one by one
-    while (buffer < end) {
-        checksum += buffer[0] << 8;
-        checksum += buffer[1];
-        buffer += 2;
-    }
+    if(bufsz == 1)
+        sum += *(unsigned char*)buf;
 
-    // add carry if any
-    uint32_t carray = checksum >> 16;
-    while (carray) {
-        checksum = (checksum & 0xffff) + carray;
-        carray = checksum >> 16;
-    }
+    sum = (sum & 0xffff) + (sum >> 16);
+    sum = (sum & 0xffff) + (sum >> 16);
 
-    // negate it
-    checksum = ~checksum;
-
-    return checksum & 0xffff;
+    return ~sum;
 }
 
 int main(int argc, char *argv[]){
-    int sd;
+    int soc;
     struct icmphdr hdr;
     struct sockaddr_in addr;
-    int network_order;
+    int network_number;
     char buf[1024];
     struct icmphdr *icmphdrptr;
     struct iphdr *iphdrptr;
+    int max_hopping = argv[1];
+    char target_addr[32];
+    memcpy(target_addr, argv[2], 32);
 
-    if(argc != 2){
-        printf("usage: %s IPADDR\n", argv[0]);
-        exit(-1);
-    }
 
     addr.sin_family = PF_INET; // IPv4
 
     // 將使用者輸入的 IP 轉成 network order
-    network_order = inet_pton(PF_INET, argv[1], &addr.sin_addr);
-    if(network_order < 0){
+    network_number = inet_pton(PF_INET, argv[1], &addr.sin_addr);
+    if(network_number < 0){
         perror("inet_pton");
         exit(-1);
     }
 
     // 開一個 IPv4 的 RAW Socket , 並且準備收取 ICMP 封包
-    sd = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
-    if(sd < 0){
+    soc = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+    if(soc < 0){
         perror("socket");
         exit(-1);
     }
@@ -92,8 +79,8 @@ int main(int argc, char *argv[]){
     hdr.checksum = checksum((unsigned short*)&hdr, sizeof(hdr));
 
     // 將定義好的 ICMP Header 送到目標主機
-    network_order = sendto(sd, (char*)&hdr, sizeof(hdr), 0, (struct sockaddr*)&addr, sizeof(addr));
-    if(network_order < 1){
+    network_number = sendto(soc, (char*)&hdr, sizeof(hdr), 0, (struct sockaddr*)&addr, sizeof(addr));
+    if(network_number < 1){
         perror("sendto");
         exit(-1);
     }
@@ -105,8 +92,8 @@ int main(int argc, char *argv[]){
     printf("Waiting for ICMP echo...\n");
 
     // 接收來自目標主機的 Echo Reply
-    network_order = recv(sd, buf, sizeof(buf), 0);
-    if(network_order < 1){
+    network_number = recv(soc, buf, sizeof(buf), 0);
+    if(network_number < 1){
         perror("recv");
         exit(-1);
     }
@@ -141,6 +128,6 @@ int main(int argc, char *argv[]){
             break;
     }
 
-    close(sd); // 關閉 socket
+    close(soc); // 關閉 socket
     return EXIT_SUCCESS;
 }
