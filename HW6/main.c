@@ -78,6 +78,7 @@ int main(int argc, char **argv){
 
     for(TTL=1; TTL<max_hopping; TTL++){
         printf("Now the TTL is %d\n", TTL);
+        setsockopt(fd, IPPROTO_IP, IP_TTL, (char *)&ttl, sizeof(ttl)); //set ttl  on all sockets
         // 將定義好的 ICMP Header 送到目標主機
         network_number = sendto(soc, (char*)&hdr, sizeof(hdr), 0, (struct sockaddr*)&addr, sizeof(addr));
         if(network_number < 1){
