@@ -119,6 +119,7 @@ int main(int argc, char **argv){
                 printf("time exceeded!\n");
                 printf("The ICMP type is %d\n", icmphdrptr->type);
                 printf("The ICMP code is %d\n", icmphdrptr->code);
+                break;
             default:
                 printf("Another situations!\n");
                 printf("The ICMP type is %d\n", icmphdrptr->type);
