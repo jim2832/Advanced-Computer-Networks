@@ -125,7 +125,7 @@ int main(int argc, char **argv){
                 else{
                     printf("an ICMP packet has been sent to %s\n", argv[2]);
                 }
-                
+
                 // 清空 buffer
                 memset(buffer, 0, sizeof(buffer));
 
@@ -159,6 +159,9 @@ int main(int argc, char **argv){
                         printf("The router ip is %s\n", inet_ntoa(received_IP.sin_addr));
 
                     default:
+                        printf("This is another situation!\n");
+                        printf("The ICMP type is %d\n", ICMP_recv_header->type);
+                        printf("The ICMP code is %d\n", ICMP_recv_header->code);
                 }
                 printf("\n");
             }
