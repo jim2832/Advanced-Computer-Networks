@@ -2,6 +2,7 @@
     "files.associations": {
         "ethernet.h": "c",
         "in.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "ip.h": "c"
     }
 }

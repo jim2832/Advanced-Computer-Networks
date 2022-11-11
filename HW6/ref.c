@@ -39,9 +39,9 @@ unsigned short checksum(unsigned short *buf, int bufsz){
 int main(int argc, char *argv[]){ 
     struct sockaddr_in IP_recv; // declare recive IP
     struct sockaddr_in IPheader_send; // declare send IP header
+    struct iphdr *IPheader_recv; // declare recive IP header
     struct icmphdr ICMPheader_send; // declare ICMP header
     struct icmphdr *ICMPheader_recv; // declare recive ICMP header
-    struct iphdr *IPheader_recv; // declare recive IP header
 
     int sockfd_recv, sockfd_send;
     int time=1;
