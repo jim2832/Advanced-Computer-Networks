@@ -96,7 +96,6 @@ int main(int argc, char **argv){
             //設定TTL
             max_hopping = atoi(argv[1]);
 
-
             //expanding ring search
             for(TTL=1; TTL<=max_hopping; TTL++){
                 //初始化IP header
@@ -144,26 +143,28 @@ int main(int argc, char **argv){
                 // 取出 ICMP Header
                 ICMP_recv_header = (struct icmphdr*)(buffer+(IP_recv_header->ihl)*4);
 
-                // 判斷ICMP type
-                switch(ICMP_recv_header->type){
-                    //ICMP echo reply
-                    case 0:
-                        printf("Now TTL = %d\n", TTL);
-                        printf("The host %s is alive\n", argv[2]);
-                        break;
-
-                    //time exceeded
-                    case 11:
-                        printf("Now TTL = %d\n", TTL);
-                        printf("%s\n", "Time exceeded!");
-                        printf("The router ip is %s\n", inet_ntoa(received_IP.sin_addr));
-
-                    default:
-                        printf("This is another situation!\n");
-                        printf("The ICMP type is %d\n", ICMP_recv_header->type);
-                        printf("The ICMP code is %d\n", ICMP_recv_header->code);
+                /*判斷ICMP type*/
+                //ICMP echo reply
+                if(ICMP_recv_header->type == 0 && ICMP_recv_header->code == 0){
+                    printf("Now TTL = %d\n", TTL);
+                    printf("The host %s is alive\n", argv[2]);
+                    break;
                 }
+                //time exceeded
+                else if(ICMP_recv_header->type == 11 && ICMP_recv_header->code == 0){
+                    printf("Now TTL = %d\n", TTL);
+                    printf("%s\n", "Time exceeded!");
+                    printf("The router ip is %s\n", inet_ntoa(received_IP.sin_addr));
+                }
+                else{
+                    printf("Have another situations!\n");
+                    printf("The ICMP type is %d\n", ICMP_recv_header->type);
+                    printf("The ICMP code is %d\n", ICMP_recv_header->code);
+                }
+
                 printf("\n");
+                printf("--------------------------------------------");
+                printf("\n\n");
             }
         }
         //exception
