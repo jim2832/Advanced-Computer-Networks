@@ -21,7 +21,7 @@ void fill_iphdr(struct ip *ip_hdr ,const char* source_ip, const char* destinatio
 void fill_icmphdr(struct icmphdr *icmp_hdr){
 	icmp_hdr->type = ICMP_ECHO;
 	icmp_hdr->icmp_id = htons(pid);
-	icmp_hdr->icmp_cksum = 0;	
+	icmp_hdr->icmp_cksum = 0;
 	icmp_hdr->icmp_id = htons(pid);
 	icmp_hdr->icmp_seq = htons(icmp_req);
 	icmp_hdr->icmp_cksum =fill_cksum(icmp_hdr);/* checksum --->let OS automatically do it*/

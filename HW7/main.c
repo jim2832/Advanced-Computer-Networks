@@ -7,26 +7,55 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
+#include <time.h>
+#include <net/if.h>
 
 #include "fill_packet.h"
 #include "pcap.h"
+
+
+#define IP_SIZE 16
+#define req_size 50
 
 void print_usage(){
 	printf("Usage:\n");
 	printf("sudo ./ipscanner -i [Network Interface Name] -t [timeout(ms)]\n");
 }
 
-pid_t pid;
+int ValidIP(const char* str){
+	struct sockaddr_in sa;
+	int result = inet_pton(AF_INET, str, &(sa.sin_addr));
+	if(result == 1){
+		return 1;
+	}
+	return 0;
+}
 
-int main(int argc, char* argv[])
-{
+int IsNumber(const char* str){
+	for(int i = 0; i < strlen(str); i++){
+		if(!isdigit(str[i])){
+			return 0;	
+		}
+	}
+	return 1;
+}
+
+pid_t pid;
+u16 icmp_req = 1;
+struct timeval stop,start,middle;
+
+int main(int argc, char* argv[]){
 	int sockfd;
 	int on = 1;
-	
+	int sockfd_send;
+	int sockfd_receive;
 	
 	pid = getpid();
-	struct sockaddr_in dst;
+	struct sockaddr_in destination;
 	myicmp *packet = (myicmp*)malloc(PACKET_SIZE);
+
+
 	int count = DEFAULT_SEND_COUNT;
 	int timeout = DEFAULT_TIMEOUT;
 	
@@ -57,7 +86,7 @@ int main(int argc, char* argv[])
  	 *   to get the "ICMP echo response" packets 
 	 *	 You should reset the timer every time before you send a packet.
 	 */
-	 if(sendto(sockfd, packet, PACKET_SIZE, 0, (struct sockaddr *)&dst, sizeof(dst)) < 0)
+	 if(sendto(sockfd, packet, PACKET_SIZE, 0, (struct sockaddr *)&destination, sizeof(destination)) < 0)
 	{
 			perror("sendto");
 			exit(1);
