@@ -11,6 +11,10 @@
 #include "fill_packet.h"
 #include "pcap.h"
 
+void print_usage(){
+	printf("Usage:\n");
+	printf("sudo ./ipscanner -i [Network Interface Name] -t [timeout(ms)]\n");
+}
 
 pid_t pid;
 

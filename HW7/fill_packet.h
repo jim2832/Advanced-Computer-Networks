@@ -14,22 +14,18 @@ typedef unsigned short u16;
 #define DEFAULT_SEND_COUNT 4
 #define DEFAULT_TIMEOUT 1500
 
-typedef struct
-{
+typedef struct{
 	struct ip ip_hdr;
 	u8 ip_option[8];
 	struct icmphdr icmp_hdr;
 	u8 data[0];
 } myicmp ;
 
-void 
-fill_iphdr ( struct ip *ip_hdr, const char* dst_ip);
+void fill_iphdr(struct ip *ip_hdr, const char* dst_ip);
 
-void
-fill_icmphdr (struct icmphdr *icmp_hdr);
+void fill_icmphdr(struct icmphdr *icmp_hdr);
 
-u16
-fill_cksum ( struct icmphdr *icmp_hdr);
+u16 fill_cksum(struct icmphdr *icmp_hdr);
  
 #endif
  
