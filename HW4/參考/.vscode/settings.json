@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "inet.h": "c",
-        "if_ether.h": "c"
-    }
-}
