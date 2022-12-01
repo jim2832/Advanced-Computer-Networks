@@ -42,8 +42,7 @@ int IsNumber(const char* str){
 }
 
 pid_t pid;
-u16 icmp_req = 1;
-struct timeval stop,start,middle;
+u16 ICMP_count = 1;
 
 int main(int argc, char* argv[]){
 	int sockfd;
@@ -51,7 +50,7 @@ int main(int argc, char* argv[]){
 	int sockfd_send;
 	int sockfd_receive;
 	
-	pid = getpid();
+	pid = getpid(); //process ID
 	struct sockaddr_in destination;
 	myicmp *packet = (myicmp*)malloc(PACKET_SIZE);
 
