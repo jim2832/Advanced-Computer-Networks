@@ -98,6 +98,7 @@ int main(int argc, char* argv[])
 	inet_ntop(AF_INET, &mymask, str_Mask, INET_ADDRSTRLEN);
 	//printf("myip = %s \n",str_IP );
 	//printf("mymask = %s \n",str_Mask);
+	
 	char maskStr[30];
 	unsigned char	Target_Mask[30]; //store subnet mask each value (int)
 	memcpy(maskStr, str_Mask, 30);
@@ -112,6 +113,7 @@ int main(int argc, char* argv[])
 		i++;
 		Mask_token = strtok(NULL,".");
 	}
+
 	char ipStr[30];
 	unsigned char 	Target_IP[30]; //store subnet mask each value (int)
 	memcpy(ipStr, str_IP, 30);
