@@ -48,23 +48,80 @@ int main(int argc, char* argv[]){
 	int sockfd;
 	int on = 1;
 	int sockfd_send;
-	int sockfd_receive;
 	
 	pid = getpid(); //process ID
-	struct sockaddr_in destination;
-	myicmp *packet = (myicmp*)malloc(PACKET_SIZE);
+	struct sockaddr_in destination; //socket address
+	struct in_addr my_ip, my_mask; //my IP address and mask
+	struct ifreq req; //request
+	myicmp *packet = (myicmp*)malloc(PACKET_SIZE); //packet
+	
+	//network interface got by ifconfig
+	strcpy(req.ifr_name, argv[2]);
 
+	//set timeout
+	int timeout = atoi(argv[4]);
 
-	int count = DEFAULT_SEND_COUNT;
-	int timeout = DEFAULT_TIMEOUT;
+	//set interface name
 	
 	/* 
 	 * in pcap.c, initialize the pcap
 	 */
-	pcap_init( target_ip , timeout);
+	//pcap_init( target_ip , timeout);
 
+	//check the root identity
+	if(geteuid() != 0){
+		printf("%s\n","ERROR: You must be root to use this tool!");
+		exit(1);
+	}
+
+	//check socket
+	if((sockfd_send = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0){
+			perror("open send socket error");
+			exit(1);
+	}
 	
-	
+	/* get ip address of my interface */
+    if(ioctl(sockfd_send, SIOCGIFADDR, &req) == -1){
+        perror("SIOCGIFADDR error");
+        my_ip.s_addr = 0;
+    }
+    else{
+        memcpy(&destination,&req.ifr_addr,sizeof(destination));
+        my_ip = destination.sin_addr;
+    }
+
+	 /*get network mask of my interface */
+	if(ioctl(sockfd_send,SIOCGIFNETMASK, &req)== -1){
+		perror("SIOCGIFNETMASK ERROR");
+		exit(1);
+		my_mask.s_addr = 0;
+	}
+	else{
+		memcpy(&destination,&req.ifr_addr,sizeof(destination));
+        my_mask = destination.sin_addr;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	if((sockfd = socket(AF_INET, SOCK_RAW , IPPROTO_RAW)) < 0)
 	{
 		perror("socket");
