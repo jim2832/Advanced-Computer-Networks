@@ -27,11 +27,13 @@ typedef struct
 	//u8 data[ICMP_DATA_SIZE];
 } myicmp ;
 
-void fill_iphdr(struct ip *ip_hdr, const char* dst_ip,char *sourceIP ,int totalLen);
+void 
+fill_iphdr ( struct ip *ip_hdr, const char* dst_ip,char *sourceIP ,int totalLen);
 
-void fill_icmphdr(struct icmp *icmp_all,char *strData);
+void
+fill_icmphdr (struct icmp *icmp_all,char *strData);
 
-unsigned short fill_cksum(struct icmp *icmp_packet);
+unsigned short
+fill_cksum(struct icmp *icmp_packet);
  
 #endif
- 
