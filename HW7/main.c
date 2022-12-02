@@ -36,7 +36,7 @@ int main(int argc, char* argv[]){
 	struct sockaddr_in destination; //socket address
 	struct in_addr my_ip, my_mask; //my IP address and mask
 	struct ifreq req; //request
-	myicmp *packet = (myicmp*)malloc(PACKET_SIZE); //packet
+	myicmp *packet;
 	
 	//network interface got by ifconfig
 	strcpy(req.ifr_name, argv[2]);
@@ -125,11 +125,11 @@ int main(int argc, char* argv[]){
 	char *ip_token;
 	int ip_num;
 	ip_token = strtok(temp_ip, ".");
-	int i = 0;
+	int j = 0;
 	while(ip_token != NULL){
 		ip_num = atoi(ip_token);
-		splited_ip[i] = ip_num;
-		i++;
+		splited_ip[j] = ip_num;
+		j++;
 		ip_token = strtok(temp_ip, ".");
 	}
 
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]){
  	 *   to get the "ICMP echo response" packets 
 	 *	 You should reset the timer every time before you send a packet.
 	 */
-	 if(sendto(sockfd, packet, PACKET_SIZE, 0, (struct sockaddr *)&destination, sizeof(destination)) < 0)
+	 if(sendto(sockfd, packet, sizeof(packet), 0, (struct sockaddr *)&destination, sizeof(destination)) < 0)
 	{
 			perror("sendto");
 			exit(1);
