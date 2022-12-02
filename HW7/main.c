@@ -22,7 +22,7 @@
 
 pid_t pid;
 u16 icmp_req = 1;
-struct timeval stop, start, middle;
+struct timeval start, stop, Time;
 
 void print_usage(){
 	printf("Usage\n");
@@ -30,12 +30,13 @@ void print_usage(){
 }
 
 int main(int argc, char* argv[]){
+	printf("\n");
 	int sockfd;
 	int on = 1;
 	int sockfd_send;
 	
 	pid = getpid();
-	struct sockaddr_in dst;
+	struct sockaddr_in destination;
 	
 	struct in_addr myip, mymask;
 	struct ifreq req_local; 
@@ -66,8 +67,8 @@ int main(int argc, char* argv[]){
         myip.s_addr = 0;
     }
     else {
-        memcpy(&dst, &req_local.ifr_addr, sizeof(dst));
-        myip = dst.sin_addr;
+        memcpy(&destination, &req_local.ifr_addr, sizeof(destination));
+        myip = destination.sin_addr;
     }
 
 	 /*get network mask of my interface */
@@ -77,8 +78,8 @@ int main(int argc, char* argv[]){
 		mymask.s_addr = 0;
 	}
 	else{
-		memcpy(&dst,&req_local.ifr_addr,sizeof(dst));
-        mymask = dst.sin_addr;
+		memcpy(&destination,&req_local.ifr_addr,sizeof(destination));
+        mymask = destination.sin_addr;
 	}
 	
 	char IP[INET_ADDRSTRLEN];
@@ -137,42 +138,43 @@ int main(int argc, char* argv[]){
 	// printf("%d\n",end_ip);
 
 	if(argc == 5){
-		if(!strcmp(argv[0], "./ipscanner") && !strcmp(argv[1], "-i") && !strcmp(argv[3], "-t")){
+		if(!strcmp(argv[0],"./ipscanner") && !strcmp(argv[1],"-i") && !strcmp(argv[3],"-t")){
 			for(int i=start_ip; i<=end_ip; i++){
 				char full_IP[30];
-				sprintf(full_IP, "%d.%d.%d.%d", splited_ip[0], splited_ip[1], splited_ip[2], i);
+				sprintf(full_IP,"%d.%d.%d.%d", splited_ip[0], splited_ip[1], splited_ip[2], i);
 
+				//set socket
 				if((sockfd = socket(AF_INET, SOCK_RAW , IPPROTO_RAW)) < 0){
 					perror("socket");
 					exit(1);
 				}
-				if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0){
+				if(setsockopt( sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0){
 					perror("setsockopt");
 					exit(1);
 				}
 
+				//set ICMP data section and destination IP address
 				char data[20] = "M113040064";
-				dst.sin_family = AF_INET;
-				dst.sin_addr.s_addr = inet_addr(full_IP);
-
-				unsigned long timeSec;
-				unsigned long timeUsec;
-
-				gettimeofday(&start, NULL);
-				gettimeofday(&stop, NULL);
-				timeSec = stop.tv_sec-start.tv_sec;
-				timeUsec =(stop.tv_usec-start.tv_usec);
+				destination.sin_family = AF_INET;
+				destination.sin_addr.s_addr = inet_addr(full_IP);
 				
-				printf("Ping %s (data size = %ld, id = 0x%x, seq = %d, timeout = %d ms)\n", full_IP, sizeof(packet.icmp_all.icmp_data),pid,icmp_req,timeout);
-				printf("%ld bytes from %s: icmp_seq=%d ID=%d time=%ld.%04ld ms\n\n", sizeof(packet.icmp_all.icmp_data), full_IP, icmp_req, pid, timeSec,timeUsec);
+				//print out the ping result
+				//printf("Ping %s (data size = %ld, id = 0x%x, seq = %d, timeout = %d ms)\n", full_IP, sizeof(packet.icmp_all.icmp_data),pid,icmp_req,timeout);
+				printf("------------------------------------------------------------\n");
+				printf("ping host %s\n", full_IP);
+				printf("data size = %ld, ping_seq = %d, id = 0x%x, timeout = %d ms\n", sizeof(packet.icmp_all.icmp_data), icmp_req, pid, timeout);
+				printf("------------------------------------------------------------\n");
 
 				//fill ip and icmp header
 				fill_icmphdr(&packet.icmp_all,data);
 				fill_iphdr(&packet.ip_hdr, full_IP,IP,sizeof(packet));
 
+				unsigned long timeUsec;
+				unsigned long timeSec;
+
 				//set timer
 				gettimeofday(&start, NULL);
-				if(sendto(sockfd, &packet, sizeof(packet), 0, &dst, sizeof(dst)) < 0){
+				if(sendto(sockfd, &packet, sizeof(packet), 0, &destination, sizeof(destination)) < 0){
 					perror("sendto");
 					exit(1);
 				}
@@ -182,21 +184,24 @@ int main(int argc, char* argv[]){
 					exit(1);
 				}
 
-				middle.tv_sec = timeout;
-				bzero(&dst,sizeof(dst));
+				Time.tv_sec = timeout / 1000;
+				bzero(&destination,sizeof(destination));
 
 				while(1){
-					//set socket option
-					setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,(struct timeval *)&middle,sizeof(struct timeval));
+					//Unreachable
+					setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,(struct timeval *)&Time,sizeof(struct timeval));
 					if(recvfrom(sockfd, &packet, sizeof(packet), 0,  NULL, NULL) < 0){
 						printf("Destination Unreachable\n\n");
 						break;
 					}
+
 					gettimeofday(&stop, NULL);
-					timeSec = stop.tv_sec - start.tv_sec;
-					timeUsec = stop.tv_usec - start.tv_usec;
+					timeSec = stop.tv_sec-start.tv_sec;
+					timeUsec =(stop.tv_usec-start.tv_usec);
+
+					//receive from host
 					if(ntohs(packet.icmp_all.icmp_type) == ICMP_ECHOREPLY){
-						printf("ICMP Reply from : %s\ntime : %ld.%03ld ms\n\n",full_IP, timeSec, timeUsec);
+						printf("Reply from : %s , time : %ld.%04ld ms\n\n",full_IP,timeSec,timeUsec);
 						break;
 					}	
 				}
