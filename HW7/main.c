@@ -191,7 +191,7 @@ int main(int argc, char* argv[]){
 					//Unreachable
 					setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,(struct timeval *)&Time,sizeof(struct timeval));
 					if(recvfrom(sockfd, &packet, sizeof(packet), 0,  NULL, NULL) < 0){
-						printf("Destination Unreachable\n\n");
+						printf("Destination Unreachable\n\n\n");
 						break;
 					}
 
@@ -201,7 +201,7 @@ int main(int argc, char* argv[]){
 
 					//receive from host
 					if(ntohs(packet.icmp_all.icmp_type) == ICMP_ECHOREPLY){
-						printf("Reply from : %s , time : %ld.%04ld ms\n\n",full_IP,timeSec,timeUsec);
+						printf("Reply from : %s , time : %ld.%04ld ms\n\n\n",full_IP,timeSec,timeUsec);
 						break;
 					}	
 				}
