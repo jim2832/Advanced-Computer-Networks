@@ -17,11 +17,12 @@
 
 #define IP_SIZE 16
 #define req_size 50
+#define ADDRLEN 30
 
 
 pid_t pid;
 u16 icmp_req = 1;
-struct timeval stop,start,middle;
+struct timeval stop, start, middle;
 
 void print_usage()
 {
@@ -38,17 +39,16 @@ int main(int argc, char* argv[])
 	pid = getpid();
 	struct sockaddr_in dst;
 	
-	struct in_addr myip,mymask;
+	struct in_addr myip, mymask;
 	struct ifreq req_local; 
-	in_addr_t target_ip_default;
 	char device_name[100];
 	
 	myicmp packet;
 	int timeout = DEFAULT_TIMEOUT;
 
-	strcpy(device_name,argv[2]);
+	strcpy(device_name, argv[2]);
+	strcpy(req_local.ifr_name, device_name);
 	timeout = atoi(argv[4]);
-	strcpy(req_local.ifr_name,device_name);
 
 	//determin the root status
 	if(geteuid() != 0){
@@ -69,12 +69,12 @@ int main(int argc, char* argv[])
         myip.s_addr = 0;
     }
     else {
-        memcpy(&dst,&req_local.ifr_addr,sizeof(dst));
+        memcpy(&dst, &req_local.ifr_addr, sizeof(dst));
         myip = dst.sin_addr;
     }
 
 	 /*get network mask of my interface */
-	if( ioctl(sockfd_send,SIOCGIFNETMASK, &req_local)== -1){
+	if( ioctl(sockfd_send, SIOCGIFNETMASK, &req_local) == -1){
 		perror("SIOCGIFADDR ERROR");
 		exit(1);
 		mymask.s_addr = 0;
@@ -83,134 +83,134 @@ int main(int argc, char* argv[])
 		memcpy(&dst,&req_local.ifr_addr,sizeof(dst));
         mymask = dst.sin_addr;
 	}
-	//printf("myip = %u \n",myip );
-	//printf("mymask = %u \n",mymask);
-	//printf("device = %s \n",device_name);
-	//printf("timeout = %d \n",timeout);
-	char str_IP[INET_ADDRSTRLEN];
-	char str_Mask[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &myip, str_IP, INET_ADDRSTRLEN);
-	inet_ntop(AF_INET, &mymask, str_Mask, INET_ADDRSTRLEN);
-
-	//printf("myip = %s \n",str_IP );
-	//printf("mymask = %s \n",str_Mask);
 	
+	char IP[INET_ADDRSTRLEN];
+	char mask[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &myip, IP, INET_ADDRSTRLEN);
+	inet_ntop(AF_INET, &mymask, mask, INET_ADDRSTRLEN);
 
-	char maskStr[30];
-	unsigned char	Target_Mask[30]; //store subnet mask each value (int)
-	memcpy(maskStr, str_Mask, 30);
+	// printf("myip = %s \n", IP);
+	// printf("mymask = %s \n", mask);
+	
+	//split the mask
+	char temp_mask[ADDRLEN];
+	unsigned char splited_mask[ADDRLEN]; //store subnet mask each value (int)
+	memcpy(temp_mask, mask, ADDRLEN);
 	char *Mask_token;
 	int MASK_Num;
-	Mask_token = strtok(maskStr, ".");
+	Mask_token = strtok(temp_mask, ".");
 	int i=0;
 	while( Mask_token != NULL) 
 	{
 		MASK_Num = atoi(Mask_token);
-		Target_Mask[i] = MASK_Num;
+		splited_mask[i] = MASK_Num;
 		i++;
 		Mask_token = strtok(NULL,".");
 	}
-	char ipStr[30];
-	unsigned char 	Target_IP[30]; //store subnet mask each value (int)
-	memcpy(ipStr, str_IP, 30);
+	
+	//split the ip address
+	char temp_ip[ADDRLEN];
+	unsigned char 	splited_ip[ADDRLEN]; //store subnet mask each value (int)
+	memcpy(temp_ip, IP, ADDRLEN);
 	char *IP_token;
 	int IP_Num;
-	IP_token = strtok(ipStr, ".");
+	IP_token = strtok(temp_ip, ".");
 	int j=0;
 	while( IP_token != NULL) 
 	{
 		IP_Num = atoi(IP_token);
-		Target_IP[j] = IP_Num;
+		splited_ip[j] = IP_Num;
 		j++;
 		IP_token = strtok(NULL,".");
 	}
 	
-	int ableIP,netSeg,startMask,endMask;
-	if(Target_Mask[2] == 255){
-		
-		ableIP = 256 - Target_Mask[3];
-		netSeg = 256 / ableIP;
 
-		//printf("ableIP :%d\n",ableIP);
-		//printf("netSeg :%d\n",netSeg);
-		if(netSeg == 1){
-			startMask =0+1;
-			endMask = 255-1;
+	int available_ip,segment,start_ip,end_ip;
+	if(splited_mask[2] == 255){
+		
+		available_ip = 256 - splited_mask[3];
+		segment = 256 / available_ip;
+
+		//printf("available_ip :%d\n",available_ip);
+		//printf("segment :%d\n",segment);
+		if(segment == 1){
+			start_ip =0+1;
+			end_ip = 255-1;
 		}
-		else if(netSeg == 2){
-			if( Target_IP[3]<128){
-				startMask =0+1;
-				endMask = 128-1;
+		else if(segment == 2){
+			if( splited_ip[3]<128){
+				start_ip =0+1;
+				end_ip = 128-1;
 			}
 			else{
-				startMask =128;
-				endMask = 255-1;
+				start_ip =128;
+				end_ip = 255-1;
 			}
 		}
-		else if(netSeg == 4){
-			if(Target_IP[3]<64){
-				startMask =0+1;
-				endMask = 63-1;
+		else if(segment == 4){
+			if(splited_ip[3]<64){
+				start_ip =0+1;
+				end_ip = 63-1;
 			}
-			else if(Target_IP[3]>63 && Target_IP[3]<128){
-				startMask =64+1;
-				endMask = 127-1;
+			else if(splited_ip[3]>63 && splited_ip[3]<128){
+				start_ip =64+1;
+				end_ip = 127-1;
 			}
-			else if(Target_IP[3]>127 && Target_IP[3]<192){
-				startMask =128+1;
-				endMask = 191-1;
+			else if(splited_ip[3]>127 && splited_ip[3]<192){
+				start_ip =128+1;
+				end_ip = 191-1;
 			}
-			else if(Target_IP[3]>191 && Target_IP[3]<256){
-				startMask =191+1;
-				endMask = 255-1;
+			else if(splited_ip[3]>191 && splited_ip[3]<256){
+				start_ip =191+1;
+				end_ip = 255-1;
 			}
 		}
-		else if(netSeg == 8){
-			if(Target_IP[3]<32){
-				startMask =0+1;
-				endMask = 31-1;
+		else if(segment == 8){
+			if(splited_ip[3]<32){
+				start_ip =0+1;
+				end_ip = 31-1;
 			}
-			else if(Target_IP[3]>31 && Target_IP[3]<64){
-				startMask =32+1;
-				endMask = 63-1;
+			else if(splited_ip[3]>31 && splited_ip[3]<64){
+				start_ip =32+1;
+				end_ip = 63-1;
 			}
-			else if(Target_IP[3]>63 && Target_IP[3]<96){
-				startMask =64+1;
-				endMask = 95-1;
+			else if(splited_ip[3]>63 && splited_ip[3]<96){
+				start_ip =64+1;
+				end_ip = 95-1;
 			}
-			else if(Target_IP[3]>95 && Target_IP[3]<128){
-				startMask =96+1;
-				endMask = 127-1;
+			else if(splited_ip[3]>95 && splited_ip[3]<128){
+				start_ip =96+1;
+				end_ip = 127-1;
 			}
-			else if(Target_IP[3]>127 && Target_IP[3]<160){
-				startMask =128+1;
-				endMask = 159-1;
+			else if(splited_ip[3]>127 && splited_ip[3]<160){
+				start_ip =128+1;
+				end_ip = 159-1;
 			}
-			else if(Target_IP[3]>159 && Target_IP[3]<192){
-				startMask =160+1;
-				endMask = 191-1;
+			else if(splited_ip[3]>159 && splited_ip[3]<192){
+				start_ip =160+1;
+				end_ip = 191-1;
 			}
-			else if(Target_IP[3]>191 && Target_IP[3]<224){
-				startMask =192+1;
-				endMask = 223-1;
+			else if(splited_ip[3]>191 && splited_ip[3]<224){
+				start_ip =192+1;
+				end_ip = 223-1;
 			}
-			else if(Target_IP[3]>223 && Target_IP[3]<256){
-				startMask =224+1;
-				endMask = 255-1;
+			else if(splited_ip[3]>223 && splited_ip[3]<256){
+				start_ip =224+1;
+				end_ip = 255-1;
 			}
 		}
 	}
-	//printf("%d\n",startMask);
-	//printf("%d\n",endMask );
+	//printf("%d\n",start_ip);
+	//printf("%d\n",end_ip );
 
 	if(argc == 5){
 		if(!strcmp(argv[0],"./ipscanner") && !strcmp(argv[1],"-i") && !strcmp(argv[3],"-t"))
 		{	
 			
 
-			for(int i=startMask;i<=endMask;i++){
+			for(int i=start_ip;i<=end_ip;i++){
 				char testIP[30];
-				sprintf(testIP,"%d.%d.%d.%d",Target_IP[0],Target_IP[1],Target_IP[2],i);
+				sprintf(testIP,"%d.%d.%d.%d",splited_ip[0],splited_ip[1],splited_ip[2],i);
 				if((sockfd = socket(AF_INET, SOCK_RAW , IPPROTO_RAW)) < 0)
 				{
 					perror("socket");
@@ -231,7 +231,7 @@ int main(int argc, char* argv[])
 
 				//fill ip and icmp header
 				fill_icmphdr(&packet.icmp_all,data);
-				fill_iphdr(&packet.ip_hdr, testIP,str_IP,sizeof(packet));
+				fill_iphdr(&packet.ip_hdr, testIP,IP,sizeof(packet));
 				unsigned long timeUsec;
 				unsigned long timeSec;
 				//set timer
@@ -282,21 +282,4 @@ int main(int argc, char* argv[])
 	}
 
 	return 0;
-}
-
-int ValidIP(const char* str){
-        struct sockaddr_in sa;
-        int result = inet_pton(AF_INET, str, &(sa.sin_addr));
-        if(result == 1){
-                return 1;
-        }
-        return 0;
-}
-int IsNumber(const char* str){
-	for(int i = 0; i < strlen(str); i++){
-		if(!isdigit(str[i])){
-			return 0;	
-		}
-	}
-	return 1;
 }
