@@ -96,11 +96,8 @@ int main(int argc, char* argv[])
 	char str_Mask[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &myip, str_IP, INET_ADDRSTRLEN);
 	inet_ntop(AF_INET, &mymask, str_Mask, INET_ADDRSTRLEN);
-
 	//printf("myip = %s \n",str_IP );
 	//printf("mymask = %s \n",str_Mask);
-	
-
 	char maskStr[30];
 	unsigned char	Target_Mask[30]; //store subnet mask each value (int)
 	memcpy(maskStr, str_Mask, 30);
@@ -205,8 +202,8 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-	printf("%d\n",startMask);
-	printf("%d\n",endMask );
+	//printf("%d\n",startMask);
+	//printf("%d\n",endMask );
 
 	if(argc == 5){
 		if(!strcmp(argv[0],"./ipscanner") && !strcmp(argv[1],"-i") && !strcmp(argv[3],"-t"))
