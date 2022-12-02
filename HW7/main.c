@@ -17,28 +17,11 @@
 
 #define IP_SIZE 16
 #define req_size 50
+#define ADDR_LEN 30
 
 void print_usage(){
 	printf("Usage:\n");
 	printf("sudo ./ipscanner -i [Network Interface Name] -t [timeout(ms)]\n");
-}
-
-int ValidIP(const char* str){
-	struct sockaddr_in sa;
-	int result = inet_pton(AF_INET, str, &(sa.sin_addr));
-	if(result == 1){
-		return 1;
-	}
-	return 0;
-}
-
-int IsNumber(const char* str){
-	for(int i = 0; i < strlen(str); i++){
-		if(!isdigit(str[i])){
-			return 0;	
-		}
-	}
-	return 1;
 }
 
 pid_t pid;
@@ -101,10 +84,60 @@ int main(int argc, char* argv[]){
         my_mask = destination.sin_addr;
 	}
 
+	char mask[INET6_ADDRSTRLEN];
+	char IP[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &my_ip, IP, INET_ADDRSTRLEN);
+	inet_ntop(AF_INET, &my_mask, mask, INET_ADDRSTRLEN);
 
+	//split the mask
+	//255.255.255.0
+	/*
+	splited_mask[0] = 255
+	splited_mask[1] = 255
+	splited_mask[2] = 255
+	splited_mask[3] = 0
+	*/
+	char temp_mask[ADDR_LEN];
+	unsigned char splited_mask[ADDR_LEN];
+	memcpy(temp_mask, mask, ADDR_LEN);
+	char *mask_token;
+	int mask_num;
+	mask_token = strtok(temp_mask, ".");
+	int i = 0;
+	while(mask_token != NULL){
+		mask_num = atoi(mask_token);
+		splited_mask[i] = mask_num;
+		i++;
+		mask_token = strtok(temp_mask, ".");
+	}
 
+	//split the IP
+	//140.117.169.50
+	/*
+	splited_ip[0] = 140
+	splited_ip[1] = 117
+	splited_ip[2] = 169
+	splited_ip[3] = 50
+	*/
+	char temp_ip[ADDR_LEN];
+	unsigned char splited_ip[ADDR_LEN];
+	memcpy(temp_ip, IP, ADDR_LEN);
+	char *ip_token;
+	int ip_num;
+	ip_token = strtok(temp_ip, ".");
+	int i = 0;
+	while(ip_token != NULL){
+		ip_num = atoi(ip_token);
+		splited_ip[i] = ip_num;
+		i++;
+		ip_token = strtok(temp_ip, ".");
+	}
 
-
+	int available_IP, segment, start, end;
+	if(splited_mask[2] == 255){
+		available_IP = 256 - splited_mask[3]; //host個數
+		segment = 256 / available_IP; //子網域數量
+	}
 
 
 
