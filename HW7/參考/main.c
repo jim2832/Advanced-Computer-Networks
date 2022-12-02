@@ -205,8 +205,8 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-	//printf("%d\n",startMask);
-	//printf("%d\n",endMask );
+	printf("%d\n",startMask);
+	printf("%d\n",endMask );
 
 	if(argc == 5){
 		if(!strcmp(argv[0],"./ipscanner") && !strcmp(argv[1],"-i") && !strcmp(argv[3],"-t"))

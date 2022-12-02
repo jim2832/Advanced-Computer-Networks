@@ -9,9 +9,7 @@
 extern pid_t pid;
 extern u16 icmp_req;
 
-void 
-fill_iphdr ( struct ip *ip_hdr , const char* dst_ip ,char *sourceIP ,int len)
-{
+void fill_iphdr (struct ip *ip_hdr , const char* dst_ip ,char *sourceIP ,int len){
 	ip_hdr -> ip_v = 4; //IPv4
 	ip_hdr -> ip_hl = 5; //IP header length
 	ip_hdr -> ip_tos = 0; //IP type of service
@@ -25,22 +23,18 @@ fill_iphdr ( struct ip *ip_hdr , const char* dst_ip ,char *sourceIP ,int len)
 	inet_aton(sourceIP, &(ip_hdr->ip_src));
 }
 
-void
-fill_icmphdr (struct icmp *icmp_all,char *strData)
-{	
+void fill_icmphdr (struct icmp *icmp_all,char *strData){	
 	
-	icmp_all->icmp_type = ICMP_ECHO;
-	icmp_all->icmp_code = 0;
-	icmp_all->icmp_cksum = 0;	
-	icmp_all->icmp_id = htons(pid);
-	icmp_all->icmp_seq = htons(icmp_req);
-	sprintf(icmp_all->icmp_data	,"%s",strData);
-	icmp_all->icmp_cksum =fill_cksum(icmp_all);/* checksum --->let OS automatically do it*/
+	icmp_all -> icmp_type = ICMP_ECHO;
+	icmp_all -> icmp_code = 0;
+	icmp_all -> icmp_cksum = 0;	
+	icmp_all -> icmp_id = htons(pid);
+	icmp_all -> icmp_seq = htons(icmp_req);
+	sprintf(icmp_all -> icmp_data	,"%s",strData);
+	icmp_all -> icmp_cksum =fill_cksum(icmp_all);/* checksum --->let OS automatically do it*/
 }
 
-unsigned short
-fill_cksum(struct icmp *icmp_packet)
-{
+unsigned short fill_cksum(struct icmp *icmp_packet){
 	unsigned long sum = 0;  /* assume 32 bit long, 16 bit short */
     unsigned short *buffer = (unsigned short*) icmp_packet;
     int len = sizeof(struct icmp);
